@@ -3,11 +3,14 @@ package main
 import (
 	"log/slog"
 	"net/http"
+	"os"
 )
 
 func main() {
-	slog.Info("Starting...")
-	slog.Info("Setup Storage...")
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	logger.Info("Starting...")
+	logger.Info("Setup Storage...")
 	store, err := NewSQLiteStore()
 	if err != nil {
 		slog.Any("err", err)
@@ -16,5 +19,5 @@ func main() {
 	fs := http.FileServer(http.Dir("./assets"))
 
 	server := NewApiServer(store, fs)
-	server.Run()
+	server.Run(logger)
 }

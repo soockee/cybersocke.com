@@ -1,0 +1,14 @@
+package components
+
+import "bytes"
+
+
+templ postContent(){
+
+}
+
+templ Post(content bytes.Buffer) {
+	@layout("Post", []NavItem{NewNavItem("Home", "/")}) {
+		@templ.Raw(content.String())
+	}
+}
