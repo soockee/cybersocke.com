@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 (2024-12-01)
+
+
+### Features
+
+* action ([9e8c339](https://github.com/soockee/cybersocke.com/commit/9e8c339f1a65082d50bc1620f26aa5466c9c00e1))
+* add basic blog ([cf0086a](https://github.com/soockee/cybersocke.com/commit/cf0086aa0b1b31a2cdb767a8a49222c2196a4d09))
+* add secrets ([29469b4](https://github.com/soockee/cybersocke.com/commit/29469b43fef268ae3e6b5a1e3090532bc62f53d3))
+
 ## [1.5.0](https://github.com/soockee/ssr-go/compare/v1.4.3...v1.5.0) (2024-11-30)
 
 
