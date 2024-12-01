@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/soockee/cybersocke.com/compare/v1.0.0...v1.1.0) (2024-12-01)
+
+
+### Features
+
+* add basic post rendering ([27b531f](https://github.com/soockee/cybersocke.com/commit/27b531f5c92956ff4feea83f21b6cfcdd1e3fa9a))
+
 ## 1.0.0 (2024-12-01)
 
 
