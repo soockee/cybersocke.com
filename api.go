@@ -1,14 +1,13 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
+	"log/slog"
 	"net/http"
 
-	"github.com/a-h/templ"
 	"github.com/gorilla/mux"
 
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/handlers"
 )
 
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
@@ -35,39 +34,19 @@ func NewApiServer(store Storage, fs http.Handler) *ApiServer {
 
 func (s *ApiServer) InitRoutes() *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc("/", makeHTTPHandleFunc(s.handleHome))
+	router.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(slog.Default()).ServeHTTP))
+	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(slog.Default()).ServeHTTP))
 	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", s.fs))
 
 	return router
 }
 
-func WriteJson(w http.ResponseWriter, status int, v any) error {
-	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(v)
-}
-
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return cors(func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
-			WriteJson(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			components.Error(err.Error()).Render(r.Context(), w)
 		}
 	})
-}
-
-func (s *ApiServer) handleHome(w http.ResponseWriter, r *http.Request) error {
-	switch r.Method {
-	case "GET":
-		component := components.Home()
-		handler := templ.Handler(component)
-		handler.ServeHTTP(w, r)
-		return nil
-	case "POST":
-		WriteJson(w, http.StatusNotImplemented, "")
-	default:
-		return errors.New("method not allowed")
-	}
-	return nil
 }
 
 func cors(next http.HandlerFunc) http.HandlerFunc {

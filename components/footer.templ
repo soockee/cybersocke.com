@@ -1,0 +1,11 @@
+package components
+import (
+	"fmt"
+	"time"
+)
+
+templ Footer() {
+	<footer>
+		<div>&copy; { fmt.Sprintf("%d", time.Now().Year()) }</div>
+	</footer>
+}

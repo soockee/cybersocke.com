@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"log/slog"
@@ -33,7 +33,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.wroteHeader = true
 }
 
-func LoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
+func WithLogging(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			defer func() {

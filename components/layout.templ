@@ -1,0 +1,31 @@
+package components
+
+
+type NavItem struct{
+    Name string
+    URL string
+}
+
+func NewNavItem(name string, URL string) NavItem{
+    return NavItem{
+        Name: name,
+        URL: URL,
+    }
+}
+
+templ layout(name string, navitems []NavItem) {
+	<!DOCTYPE html>
+	<html lang="en">
+		@Header(name)
+		<header>
+			<h1>{ name }</h1>
+		</header>
+		<body>
+			@navTemplate(navitems)
+			<main>
+				{ children... }
+			</main>
+		</body>
+		@Footer()
+	</html>
+}

@@ -2,10 +2,12 @@ module github.com/soockee/cybersocke.com
 
 go 1.23.1
 
-require github.com/a-h/templ v0.2.747
+require github.com/a-h/templ v0.2.793
 
 require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/segmentio/ksuid v1.0.4 // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
 	golang.org/x/text v0.17.0 // indirect
 )
 

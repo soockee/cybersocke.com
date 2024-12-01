@@ -5,28 +5,27 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/soockee/cybersocke.com/middleware"
 )
 
-func (s *ApiServer) Run() {
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	serverLogger := slog.NewLogLogger(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}), slog.LevelDebug)
-
-	router := s.InitRoutes()
-
-	loggingMiddleware := LoggingMiddleware(logger)
-	loggedRouter := loggingMiddleware(router)
+func (s *ApiServer) Run(logger *slog.Logger) {
+	loggingMiddleware := middleware.WithLogging(logger)
+	sessionMiddleware := middleware.WithSession(logger, true, true)
+	r := s.InitRoutes()
+	router := sessionMiddleware(loggingMiddleware(r))
 
 	httpServer := &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		Addr:         ":http",
-		Handler:      loggedRouter,
-		ErrorLog:     serverLogger,
+		Handler:      router,
+		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelDebug),
 	}
 
 	if err := httpServer.ListenAndServe(); err != nil {
-		logger.Error("Failed to start HTTP server", err)
+		logger.Error("Failed to start HTTP server", slog.Any("err", err))
 		os.Exit(1)
 	}
 }
