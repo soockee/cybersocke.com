@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/soockee/cybersocke.com/compare/v1.1.0...v1.2.0) (2024-12-21)
+
+
+### Features
+
+* add posts handling ([269fd47](https://github.com/soockee/cybersocke.com/commit/269fd470090f1b4e58ab545bea7adf8d6e429b7e))
+
 ## [1.1.0](https://github.com/soockee/cybersocke.com/compare/v1.0.0...v1.1.0) (2024-12-01)
 
 
