@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/soockee/cybersocke.com/compare/v1.2.0...v1.2.1) (2024-12-21)
+
+
+### Bug Fixes
+
+* scope css to navbar ([1f50675](https://github.com/soockee/cybersocke.com/commit/1f50675e628c87c1346e09a81740034c5335cdfc))
+
 ## [1.2.0](https://github.com/soockee/cybersocke.com/compare/v1.1.0...v1.2.0) (2024-12-21)
 
 
