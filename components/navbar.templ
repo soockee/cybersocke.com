@@ -1,66 +1,83 @@
 package components
 
 
+css NavBar() {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100px;
+	background-color: #333;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+css NavBarUnorderdList() {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	gap: 30px;
+}
+
+css NavBarListItem() {
+	display: inline;
+}
+
+css NavBarLink() {
+	text-decoration: none;
+	color: #333;
+}
+
+
 templ navTemplate(links []NavItem) {
-	<nav>
-		<ul>
+	<nav class={NavBar()}>
+		<ul class={NavBarUnorderdList()}>
 			for _, link := range links {
-				<li><a href={ templ.URL(link.URL) }>{ link.Name }</a></li>
+				<li class={NavBarListItem()}>
+					<style>
+						@scope {
+							:scope {
+								a {
+									text-decoration: none;
+									color: #fff;
+									font-weight: bold;
+									font-size: 1.2em;
+									padding: 10px 20px;
+									border-radius: 5px;
+									transition: all 0.3s ease;
+									position: relative;
+									overflow: hidden;
+								}
+								a::before {
+									content: "";
+									position: absolute;
+									top: 0;
+									left: 0;
+									width: 100%;
+									height: 100%;
+									background-color: rgba(255, 255, 255, 0.2);
+									transform: scaleX(0);
+									transform-origin: right;
+									transition: transform 0.3s ease;
+									z-index: 0;
+								}
+								a:hover::before {
+									transform: scaleX(1);
+									transform-origin: left;
+								}
+								a:hover {
+									background-color: #fff;
+									color: #333;
+									box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+									cursor: pointer;
+								}
+							}
+						}
+					</style>
+					<a href={ templ.URL(link.URL) }>
+						{ link.Name }
+					</a>
+				</li>
 			}
 		</ul>
 	</nav>
-	<style>
-		nav {
-			display: flex;
-			justify-content: center; /* Centers the navigation */
-			align-items: center;
-			height: 100px;
-			background-color: #333; /* Dark background for contrast */
-			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Slight shadow for a 3D effect */
-		}
-		ul {
-			list-style: none;
-			padding: 0;
-			margin: 0;
-			display: flex;
-			gap: 30px; /* Spacing between links */
-		}
-		li {
-			display: inline;
-		}
-		a {
-			text-decoration: none;
-			color: #fff; /* White text */
-			font-weight: bold;
-			font-size: 1.2em;
-			padding: 10px 20px;
-			border-radius: 5px; /* Rounded corners */
-			transition: all 0.3s ease; /* Smooth transition effect */
-			position: relative;
-			overflow: hidden;
-		}
-		a::before {
-			content: "";
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(255, 255, 255, 0.2); /* Light overlay */
-			transform: scaleX(0);
-			transform-origin: right;
-			transition: transform 0.3s ease;
-			z-index: 0;
-		}
-		a:hover::before {
-			transform: scaleX(1); /* Expands on hover */
-			transform-origin: left;
-		}
-		a:hover {
-			background-color: #fff; /* Changes background color */
-			color: #333; /* Text color switch */
-			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* Adds shadow for depth */
-			cursor: pointer; /* Change cursor on hover */
-		}
-	</style>
 }

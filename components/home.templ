@@ -18,7 +18,6 @@ func getNavItems() []NavItem {
 
 templ Home(props HomeViewProps) {
 	@layout("Home", getNavItems()) {
-		<div>Work in progress.</div>
 		<div>
 			for _, post := range  storage.SortBlogPostMap(props.Posts) {
 				@PostCard(PostCardProps{

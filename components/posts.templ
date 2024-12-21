@@ -18,24 +18,30 @@ templ Post(props PostViewProps) {
 	}
 }
 
+css PostCardTitle() {
+	font-size: 1.5em;
+	margin: 0;
+}
+
+css PostCardDescription() {
+	font-size: 1em;
+	margin: 0;
+}
+
+css PostCardLink() {
+	text-decoration: none;
+	color: #333;
+}
+
 templ PostCard(props PostCardProps) {
 	<section>
 		<aside>
-			<h2><a href={ templ.URL("/posts/" + props.Slug) }>{ props.Title }</a></h2>
-			<p>{ props.Description }</p>
+			<h2 class={PostCardTitle()}>
+				<a class={PostCardLink()} href={ templ.URL("/posts/" + props.Slug) }>
+					{ props.Title }
+				</a>
+			</h2>
+			<p class={PostCardDescription()}>{ props.Description }</p>
 		</aside>
 	</section>
-	<style>
-		article {
-			margin: 20px 0;
-		}
-		h2 {
-			font-size: 1.5em;
-			margin: 0;
-		}
-		a {
-			text-decoration: none;
-			color: #333;
-		}
-	</style>
 }
