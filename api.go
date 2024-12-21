@@ -3,11 +3,16 @@ package main
 import (
 	"log/slog"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/handlers"
+	"github.com/soockee/cybersocke.com/middleware"
+	"github.com/soockee/cybersocke.com/services"
+	"github.com/soockee/cybersocke.com/storage"
 )
 
 type apiFunc func(w http.ResponseWriter, r *http.Request) error
@@ -17,26 +22,51 @@ type ApiError struct {
 }
 
 type ApiServer struct {
-	store      Storage
-	fs         http.Handler
+	store      storage.Storage
 	domainName string
+	logger     *slog.Logger
 }
 
-func NewApiServer(store Storage, fs http.Handler) *ApiServer {
+func NewApiServer(store storage.Storage, logger *slog.Logger) *ApiServer {
 	server := &ApiServer{
-		store: store,
-		fs:    fs,
+		store:      store,
+		domainName: "cybersocke.com",
+		logger:     logger,
+	}
+	return server
+}
+
+func (s *ApiServer) Run() {
+	loggingMiddleware := middleware.WithLogging(s.logger)
+	sessionMiddleware := middleware.WithSession(s.logger, true, true)
+	r := s.InitRoutes()
+	router := sessionMiddleware(loggingMiddleware(r))
+
+	httpServer := &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Addr:         ":http",
+		Handler:      router,
+		ErrorLog:     slog.NewLogLogger(s.logger.Handler(), slog.LevelDebug),
 	}
 
-	server.domainName = "stockhause.info"
-	return server
+	if err := httpServer.ListenAndServe(); err != nil {
+		s.logger.Error("Failed to start HTTP server", slog.Any("err", err))
+		os.Exit(1)
+	}
 }
 
 func (s *ApiServer) InitRoutes() *mux.Router {
 	router := mux.NewRouter()
-	router.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(slog.Default()).ServeHTTP))
-	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(slog.Default()).ServeHTTP))
-	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", s.fs))
+
+	postService := services.NewPostService(s.store)
+
+	homeHandler := handlers.NewHomeHandler(postService, s.logger)
+	router.HandleFunc("/", makeHTTPHandleFunc(homeHandler.ServeHTTP))
+
+	postHandler := handlers.NewPostHandler(postService, s.logger)
+	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(postHandler.ServeHTTP))
 
 	return router
 }

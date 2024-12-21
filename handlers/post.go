@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -12,12 +11,14 @@ import (
 )
 
 type PostHandler struct {
-	Log *slog.Logger
+	Log     *slog.Logger
+	service *services.PostService
 }
 
-func NewPostHandler(log *slog.Logger) *PostHandler {
+func NewPostHandler(service *services.PostService, log *slog.Logger) *PostHandler {
 	return &PostHandler{
-		Log: log,
+		service: service,
+		Log:     log,
 	}
 }
 
@@ -34,9 +35,9 @@ func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 
 func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	idStr := mux.Vars(r)["id"]
-	data := services.GetPost(idStr)
-	md := services.RenderMD(data)
-	h.View(w, r, ViewProps{
+	data := h.service.GetPost(idStr)
+	md := h.service.RenderMD(data)
+	h.View(w, r, components.PostViewProps{
 		Content: md,
 	})
 	return nil
@@ -46,10 +47,6 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 	return errors.New("method not allowed")
 }
 
-type ViewProps struct {
-	Content bytes.Buffer
-}
-
-func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props ViewProps) {
-	components.Post(props.Content).Render(r.Context(), w)
+func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props components.PostViewProps) {
+	components.Post(props).Render(r.Context(), w)
 }

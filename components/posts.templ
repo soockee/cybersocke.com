@@ -2,13 +2,40 @@ package components
 
 import "bytes"
 
-
-templ postContent(){
-
+type PostViewProps struct {
+	Content bytes.Buffer
 }
 
-templ Post(content bytes.Buffer) {
+type PostCardProps struct {
+	Title string
+	Description string
+	Slug string
+}
+
+templ Post(props PostViewProps) {
 	@layout("Post", []NavItem{NewNavItem("Home", "/")}) {
-		@templ.Raw(content.String())
+		@templ.Raw(props.Content.String())
 	}
+}
+
+templ PostCard(props PostCardProps) {
+	<section>
+		<aside>
+			<h2><a href={ templ.URL("/posts/" + props.Slug) }>{ props.Title }</a></h2>
+			<p>{ props.Description }</p>
+		</aside>
+	</section>
+	<style>
+		article {
+			margin: 20px 0;
+		}
+		h2 {
+			font-size: 1.5em;
+			margin: 0;
+		}
+		a {
+			text-decoration: none;
+			color: #333;
+		}
+	</style>
 }

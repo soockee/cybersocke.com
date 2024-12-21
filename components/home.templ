@@ -1,7 +1,32 @@
 package components
 
-templ Home() {
-	@layout("Home",[]NavItem{NewNavItem("Home", "/")}) {
+import (
+	"github.com/soockee/cybersocke.com/storage"
+)
+
+
+type HomeViewProps struct {
+	Posts map[string]storage.BlogPost
+}
+
+func getNavItems() []NavItem {
+	items := []NavItem{
+		NewNavItem("Home", "/"),
+	}
+	return items
+}
+
+templ Home(props HomeViewProps) {
+	@layout("Home", getNavItems()) {
 		<div>Work in progress.</div>
+		<div>
+			for _, post := range  storage.SortBlogPostMap(props.Posts) {
+				@PostCard(PostCardProps{
+					Title: post.Meta.Name,
+					Description: post.Meta.Description,
+					Slug: post.Meta.Slug,
+				})
+			} 
+		</div>
 	}
 }
