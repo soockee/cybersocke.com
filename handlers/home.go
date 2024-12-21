@@ -6,15 +6,18 @@ import (
 	"net/http"
 
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/services"
 )
 
 type HomeHandler struct {
-	Log *slog.Logger
+	Log     *slog.Logger
+	service *services.PostService
 }
 
-func NewHomeHandler(log *slog.Logger) *HomeHandler {
+func NewHomeHandler(service *services.PostService, log *slog.Logger) *HomeHandler {
 	return &HomeHandler{
 		Log: log,
+		service: service,
 	}
 }
 
@@ -30,7 +33,10 @@ func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	h.View(w, r)
+	posts := h.service.GetPosts()
+	h.View(w, r, components.HomeViewProps{
+		Posts: posts,
+	})
 	return nil
 }
 
@@ -38,6 +44,6 @@ func (h *HomeHandler) Post(w http.ResponseWriter, r *http.Request) error {
 	return errors.New("method not allowed")
 }
 
-func (h *HomeHandler) View(w http.ResponseWriter, r *http.Request) {
-	components.Home().Render(r.Context(), w)
+func (h *HomeHandler) View(w http.ResponseWriter, r *http.Request, props components.HomeViewProps) {
+	components.Home(props).Render(r.Context(), w)
 }

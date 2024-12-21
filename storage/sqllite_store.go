@@ -1,11 +1,6 @@
-package main
+package storage
 
-import (
-	"zombiezen.com/go/sqlite"
-)
-
-type Storage interface {
-}
+import "zombiezen.com/go/sqlite"
 
 type SQLiteStore struct {
 	db *sqlite.Conn
@@ -20,4 +15,9 @@ func NewSQLiteStore() (*SQLiteStore, error) {
 	return &SQLiteStore{
 		db: conn,
 	}, nil
+}
+
+func (s *SQLiteStore) GetPost(id string) []byte {
+	// placeholder
+	return []byte("not implemented")
 }
