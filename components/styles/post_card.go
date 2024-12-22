@@ -33,10 +33,25 @@ var (
 			},
 		},
 		{
+			Selector: ".postcard .postcard_footer",
+			Props: gcss.Props{
+				Display:        props.DisplayFlex,
+				JustifyContent: props.JustifyContentSpaceBetween,
+				MarginTop:      props.Unit{Size: 10, Type: props.UnitTypePx},
+			},
+		},
+
+		{
 			Selector: ".postcard .p_date",
 			Props: gcss.Props{
 				FontSize: props.Unit{Size: 0.9, Type: props.UnitTypeEm},
-				Margin:   props.Unit{Size: 0, Type: props.UnitTypeAuto},
+				Color:    props.ColorRGBA(153, 153, 153, 255),
+			},
+		},
+		{
+			Selector: ".postcard span",
+			Props: gcss.Props{
+				FontSize: props.Unit{Size: 0.5, Type: props.UnitTypeEm},
 				Color:    props.ColorRGBA(153, 153, 153, 255),
 			},
 		},

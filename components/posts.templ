@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"time"
 	"github.com/soockee/cybersocke.com/components/styles"
+	"strings"
 )
 
 type PostViewProps struct {
@@ -15,6 +16,7 @@ type PostCardProps struct {
 	Description string
 	Slug string
 	Date time.Time
+	Tags []string
 }
 
 templ Post(props PostViewProps) {
@@ -39,9 +41,14 @@ templ PostCard(props PostCardProps) {
 					{ props.Title }
 				</h2>
 				<p>{ props.Description }</p>
-				<p class="p_date">
+				<div class="postcard_footer">
+					<p class="p_date">
 					{ props.Date.Format("January 2, 2006") }
-				</p>
+					</p>
+					<span>
+						{ strings.Join(props.Tags, ", ") }
+					</span>
+				</div>
 			</aside>
 		</a>
 	</section>
