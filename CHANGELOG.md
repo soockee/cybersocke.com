@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/soockee/cybersocke.com/compare/v1.2.2...v1.3.0) (2024-12-22)
+
+
+### Features
+
+* add date to posts ([d46633c](https://github.com/soockee/cybersocke.com/commit/d46633c52ff992e99cd419d421392cea899640f5))
+* add tags to posts ([b191d3a](https://github.com/soockee/cybersocke.com/commit/b191d3a6faa0a8ed5c639b1edab777607fb4b2b9))
+
 ## [1.2.2](https://github.com/soockee/cybersocke.com/compare/v1.2.1...v1.2.2) (2024-12-22)
 
 
