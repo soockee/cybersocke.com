@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/soockee/cybersocke.com/compare/v1.2.1...v1.2.2) (2024-12-22)
+
+
+### Bug Fixes
+
+* add fileserver back ([3b5a998](https://github.com/soockee/cybersocke.com/commit/3b5a998418e232caa12d3a711500a7e9b6963dfd))
+
 ## [1.2.1](https://github.com/soockee/cybersocke.com/compare/v1.2.0...v1.2.1) (2024-12-22)
 
 
