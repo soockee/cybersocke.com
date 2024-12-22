@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1](https://github.com/soockee/cybersocke.com/compare/v1.2.0...v1.2.1) (2024-12-22)
+
+
+### Bug Fixes
+
+* go mod tidy ([dcdb00c](https://github.com/soockee/cybersocke.com/commit/dcdb00c02db7a1d15352861ea042f4eeac2e8321))
+* scope css to navbar ([1f50675](https://github.com/soockee/cybersocke.com/commit/1f50675e628c87c1346e09a81740034c5335cdfc))
+* use gcss for styles ([384955f](https://github.com/soockee/cybersocke.com/commit/384955fae430eb3693f936a6213f1f53d5424e2e))
+
 ## [1.2.0](https://github.com/soockee/cybersocke.com/compare/v1.1.0...v1.2.0) (2024-12-21)
 
 
