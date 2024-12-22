@@ -8,8 +8,9 @@ import (
 )
 
 type Storage interface {
-	GetPost(id string) BlogPost
-	GetPosts() map[string]BlogPost
+	GetPost(id string) Post
+	GetPosts() map[string]Post
+	GetAbout() []byte
 	GetFS() http.Handler
 }
 
@@ -21,23 +22,23 @@ type PostMeta struct {
 	Description string    `yaml:"description"`
 }
 
-type BlogPost struct {
+type Post struct {
 	Meta    PostMeta
 	Content []byte
 }
 
-func SortBlogPostMap(posts map[string]BlogPost) []BlogPost {
+func SortPostMap(posts map[string]Post) []Post {
 	it := maps.Values(posts)
-	s := []BlogPost{}
+	s := []Post{}
 	for post := range it {
 		s = append(s, post)
 	}
 	return SortPostsByDate(s)
 }
 
-func SortPostsByDate(posts []BlogPost) []BlogPost {
+func SortPostsByDate(posts []Post) []Post {
 	// Sort in descending order (newest first)
-	slices.SortFunc(posts, func(a, b BlogPost) int {
+	slices.SortFunc(posts, func(a, b Post) int {
 		if a.Meta.Date.After(b.Meta.Date) {
 			return -1 // a is newer, comes first
 		} else if a.Meta.Date.Before(b.Meta.Date) {

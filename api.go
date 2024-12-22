@@ -64,9 +64,13 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 	router := mux.NewRouter()
 
 	postService := services.NewPostService(s.store)
+	aboutService := services.NewAboutService(s.store)
 
 	homeHandler := handlers.NewHomeHandler(postService, s.logger)
 	router.HandleFunc("/", makeHTTPHandleFunc(homeHandler.ServeHTTP))
+
+	aboutHandler := handlers.NewAboutHandler(aboutService, s.logger)
+	router.HandleFunc("/about", makeHTTPHandleFunc(aboutHandler.ServeHTTP))
 
 	postHandler := handlers.NewPostHandler(postService, s.logger)
 	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(postHandler.ServeHTTP))

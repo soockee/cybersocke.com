@@ -17,9 +17,6 @@ templ layout(name string, navitems []NavItem) {
 	<!DOCTYPE html>
 	<html lang="en">
 		@Header(name)
-		<header>
-			<h1>{ name }</h1>
-		</header>
 		<body>
 			@navTemplate(navitems)
 			<main>

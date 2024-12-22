@@ -2,6 +2,7 @@ package components
 
 import (
 	"bytes"
+	"time"
 	"github.com/soockee/cybersocke.com/components/styles"
 )
 
@@ -13,6 +14,7 @@ type PostCardProps struct {
 	Title string
 	Description string
 	Slug string
+	Date time.Time
 }
 
 templ Post(props PostViewProps) {
@@ -33,10 +35,13 @@ templ PostCard(props PostCardProps) {
 	<section class="postcard">
 		<a href={ templ.URL("/posts/" + props.Slug) }>
 			<aside>
-				<h2 style="font-size: 1.5em; margin: 0;">
+				<h2>
 					{ props.Title }
 				</h2>
-				<p style="font-size: 1em; margin: 0;">{ props.Description }</p>
+				<p>{ props.Description }</p>
+				<p class="p_date">
+					{ props.Date.Format("January 2, 2006") }
+				</p>
 			</aside>
 		</a>
 	</section>

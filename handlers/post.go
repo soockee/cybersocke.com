@@ -36,7 +36,7 @@ func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	idStr := mux.Vars(r)["id"]
 	data := h.service.GetPost(idStr)
-	md := h.service.RenderMD(data)
+	md := services.RenderMD(data)
 	h.View(w, r, components.PostViewProps{
 		Content: md,
 	})

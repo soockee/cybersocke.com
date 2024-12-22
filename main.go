@@ -18,9 +18,10 @@ func main() {
 
 	logger.Info("Starting...")
 	logger.Info("Setup Storage...")
-	store, err := storage.NewEmbedStore("assets/blog/content", "assets/public", assets)
+	store, err := storage.NewEmbedStore("assets/content/blog", "assets/public", assets)
 	if err != nil {
-		slog.Any("err", err)
+		logger.Error("Failed to setup storage", slog.Any("error msg", err))
+		os.Exit(1)
 	}
 
 	server := NewApiServer(store, logger, assets)

@@ -33,6 +33,14 @@ var (
 			},
 		},
 		{
+			Selector: ".postcard .p_date",
+			Props: gcss.Props{
+				FontSize: props.Unit{Size: 0.9, Type: props.UnitTypeEm},
+				Margin:   props.Unit{Size: 0, Type: props.UnitTypeAuto},
+				Color:    props.ColorRGBA(153, 153, 153, 255),
+			},
+		},
+		{
 			Selector: ".postcard a",
 			Props: gcss.Props{
 				TextDecorationLine: props.TextDecorationLineNone,

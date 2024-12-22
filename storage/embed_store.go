@@ -11,12 +11,12 @@ import (
 
 type EmbedStore struct {
 	assets    embed.FS
-	blogPosts map[string]BlogPost
+	posts map[string]Post
 	fs        http.Handler
 }
 
 func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, error) {
-	blogPosts := map[string]BlogPost{}
+	posts := map[string]Post{}
 
 	files, err := assets.ReadDir(postDir)
 	if err != nil {
@@ -35,7 +35,7 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 			if err != nil {
 				return nil, err
 			}
-			blogPosts[postMeta.Slug] = BlogPost{
+			posts[postMeta.Slug] = Post{
 				Meta:    postMeta,
 				Content: content,
 			}
@@ -50,17 +50,30 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 
 	return &EmbedStore{
 		assets:    assets,
-		blogPosts: blogPosts,
+		posts: posts,
 		fs:        fs,
 	}, nil
 }
 
-func (s *EmbedStore) GetPost(id string) BlogPost {
-	return s.blogPosts[id]
+func (s *EmbedStore) GetPost(id string) Post {
+	return s.posts[id]
 }
 
-func (s *EmbedStore) GetPosts() map[string]BlogPost {
-	return s.blogPosts
+func (s *EmbedStore) GetPosts() map[string]Post {
+	return s.posts
+}
+
+func (s *EmbedStore) GetAbout() []byte {
+	f, err := s.assets.ReadFile("assets/content/about/about.md")
+	if err != nil {
+		return []byte{}
+	}
+	postMeta := PostMeta{}
+	content, err := frontmatter.Parse(strings.NewReader(string(f)), &postMeta)
+	if err != nil {
+		return []byte{}
+	}
+	return content
 }
 
 func (s *EmbedStore) GetFS() http.Handler {

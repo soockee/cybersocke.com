@@ -6,12 +6,13 @@ import (
 
 
 type HomeViewProps struct {
-	Posts map[string]storage.BlogPost
+	Posts map[string]storage.Post
 }
 
 func getNavItems() []NavItem {
 	items := []NavItem{
 		NewNavItem("Home", "/"),
+		NewNavItem("About", "/about"),
 	}
 	return items
 }
@@ -19,11 +20,12 @@ func getNavItems() []NavItem {
 templ Home(props HomeViewProps) {
 	@layout("Home", getNavItems()) {
 		<div>
-			for _, post := range  storage.SortBlogPostMap(props.Posts) {
+			for _, post := range  storage.SortPostMap(props.Posts) {
 				@PostCard(PostCardProps{
 					Title: post.Meta.Name,
 					Description: post.Meta.Description,
 					Slug: post.Meta.Slug,
+					Date: post.Meta.Date,
 				})
 			} 
 		</div>
