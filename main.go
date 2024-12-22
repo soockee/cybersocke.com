@@ -18,11 +18,11 @@ func main() {
 
 	logger.Info("Starting...")
 	logger.Info("Setup Storage...")
-	store, err := storage.NewEmbedStore("assets/blog/content", assets)
+	store, err := storage.NewEmbedStore("assets/blog/content", "assets/public", assets)
 	if err != nil {
 		slog.Any("err", err)
 	}
 
-	server := NewApiServer(store, logger)
+	server := NewApiServer(store, logger, assets)
 	server.Run()
 }

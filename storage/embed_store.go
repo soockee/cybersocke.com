@@ -2,6 +2,8 @@ package storage
 
 import (
 	"embed"
+	"io/fs"
+	"net/http"
 	"strings"
 
 	"github.com/soockee/cybersocke.com/parser/frontmatter"
@@ -10,9 +12,10 @@ import (
 type EmbedStore struct {
 	assets    embed.FS
 	blogPosts map[string]BlogPost
+	fs        http.Handler
 }
 
-func NewEmbedStore(postDir string, assets embed.FS) (*EmbedStore, error) {
+func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, error) {
 	blogPosts := map[string]BlogPost{}
 
 	files, err := assets.ReadDir(postDir)
@@ -38,9 +41,17 @@ func NewEmbedStore(postDir string, assets embed.FS) (*EmbedStore, error) {
 			}
 		}
 	}
+
+	public, err := fs.Sub(assets, publicDir)
+	if err != nil {
+		return nil, err
+	}
+	fs := http.FileServer(http.FS(public))
+
 	return &EmbedStore{
 		assets:    assets,
 		blogPosts: blogPosts,
+		fs:        fs,
 	}, nil
 }
 
@@ -50,4 +61,8 @@ func (s *EmbedStore) GetPost(id string) BlogPost {
 
 func (s *EmbedStore) GetPosts() map[string]BlogPost {
 	return s.blogPosts
+}
+
+func (s *EmbedStore) GetFS() http.Handler {
+	return s.fs
 }

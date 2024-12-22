@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"log/slog"
 	"net/http"
 	"os"
@@ -25,13 +26,15 @@ type ApiServer struct {
 	store      storage.Storage
 	domainName string
 	logger     *slog.Logger
+	assets     embed.FS
 }
 
-func NewApiServer(store storage.Storage, logger *slog.Logger) *ApiServer {
+func NewApiServer(store storage.Storage, logger *slog.Logger, assets embed.FS) *ApiServer {
 	server := &ApiServer{
 		store:      store,
 		domainName: "cybersocke.com",
 		logger:     logger,
+		assets:     assets,
 	}
 	return server
 }
@@ -67,6 +70,8 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 
 	postHandler := handlers.NewPostHandler(postService, s.logger)
 	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(postHandler.ServeHTTP))
+
+	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", s.store.GetFS()))
 
 	return router
 }

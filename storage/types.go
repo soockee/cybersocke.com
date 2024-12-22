@@ -2,6 +2,7 @@ package storage
 
 import (
 	"maps"
+	"net/http"
 	"slices"
 	"time"
 )
@@ -9,6 +10,7 @@ import (
 type Storage interface {
 	GetPost(id string) BlogPost
 	GetPosts() map[string]BlogPost
+	GetFS() http.Handler
 }
 
 type PostMeta struct {
