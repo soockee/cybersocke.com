@@ -2,7 +2,7 @@
 name: "Cloud Data Storage"
 slug: "cloud-data-storage-for-highly-parallel-application"
 tags: ["cloud", "storage", "distributed systems"]
-date: 2021-02-18
+date: 2020-09-22
 description: "Cloud Data Storage for highly parallel applications."
 ---
 
