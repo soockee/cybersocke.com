@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/AccentDesign/gcss v0.1.2 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
 	golang.org/x/text v0.17.0 // indirect

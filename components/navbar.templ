@@ -1,5 +1,6 @@
 package components
 
+import styles "github.com/soockee/cybersocke.com/components/styles"
 
 css NavBar() {
 	display: flex;
@@ -27,52 +28,19 @@ css NavBarLink() {
 	color: #333;
 }
 
+templ NavbarCSS() {
+  @styles.NavbarStylesHandle.Once() {
+    @styles.NavbarStyles
+  }
+}
+
 
 templ navTemplate(links []NavItem) {
-	<nav class={NavBar()}>
-		<ul class={NavBarUnorderdList()}>
+	@NavbarCSS()
+	<nav class="navbar">
+		<ul>
 			for _, link := range links {
-				<li class={NavBarListItem()}>
-					<style>
-						@scope {
-							:scope {
-								a {
-									text-decoration: none;
-									color: #fff;
-									font-weight: bold;
-									font-size: 1.2em;
-									padding: 10px 20px;
-									border-radius: 5px;
-									transition: all 0.3s ease;
-									position: relative;
-									overflow: hidden;
-								}
-								a::before {
-									content: "";
-									position: absolute;
-									top: 0;
-									left: 0;
-									width: 100%;
-									height: 100%;
-									background-color: rgba(255, 255, 255, 0.2);
-									transform: scaleX(0);
-									transform-origin: right;
-									transition: transform 0.3s ease;
-									z-index: 0;
-								}
-								a:hover::before {
-									transform: scaleX(1);
-									transform-origin: left;
-								}
-								a:hover {
-									background-color: #fff;
-									color: #333;
-									box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-									cursor: pointer;
-								}
-							}
-						}
-					</style>
+				<li>
 					<a href={ templ.URL(link.URL) }>
 						{ link.Name }
 					</a>

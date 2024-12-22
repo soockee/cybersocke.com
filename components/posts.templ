@@ -1,6 +1,9 @@
 package components
 
-import "bytes"
+import (
+	"bytes"
+	"github.com/soockee/cybersocke.com/components/styles"
+)
 
 type PostViewProps struct {
 	Content bytes.Buffer
@@ -18,30 +21,23 @@ templ Post(props PostViewProps) {
 	}
 }
 
-css PostCardTitle() {
-	font-size: 1.5em;
-	margin: 0;
+templ PostCardCSS() {
+  @styles.PostCardStylesHandle.Once() {
+    @styles.PostCardStyles
+  }
 }
 
-css PostCardDescription() {
-	font-size: 1em;
-	margin: 0;
-}
-
-css PostCardLink() {
-	text-decoration: none;
-	color: #333;
-}
 
 templ PostCard(props PostCardProps) {
-	<section>
-		<aside>
-			<h2 class={PostCardTitle()}>
-				<a class={PostCardLink()} href={ templ.URL("/posts/" + props.Slug) }>
+	@PostCardCSS()
+	<section class="postcard">
+		<a href={ templ.URL("/posts/" + props.Slug) }>
+			<aside>
+				<h2 style="font-size: 1.5em; margin: 0;">
 					{ props.Title }
-				</a>
-			</h2>
-			<p class={PostCardDescription()}>{ props.Description }</p>
-		</aside>
+				</h2>
+				<p style="font-size: 1em; margin: 0;">{ props.Description }</p>
+			</aside>
+		</a>
 	</section>
 }
