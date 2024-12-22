@@ -3,6 +3,7 @@ module github.com/soockee/cybersocke.com
 go 1.23.1
 
 require (
+	github.com/AccentDesign/gcss v0.1.2
 	github.com/a-h/templ v0.2.793
 	github.com/segmentio/ksuid v1.0.4
 	github.com/yuin/goldmark v1.7.8
@@ -10,7 +11,6 @@ require (
 )
 
 require (
-	github.com/AccentDesign/gcss v0.1.2 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
 	golang.org/x/text v0.17.0 // indirect
