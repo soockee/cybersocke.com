@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/soockee/cybersocke.com/compare/v1.3.1...v1.4.0) (2025-01-14)
+
+
+### Features
+
+* add gcp post ([8261b3d](https://github.com/soockee/cybersocke.com/commit/8261b3d93581e8b7e1f44a49bd870a7dcc71d43c))
+
 ## [1.3.1](https://github.com/soockee/cybersocke.com/compare/v1.3.0...v1.3.1) (2024-12-22)
 
 
