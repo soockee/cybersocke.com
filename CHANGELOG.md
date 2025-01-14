@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.5.0](https://github.com/soockee/cybersocke.com/compare/v1.4.0...v1.5.0) (2025-01-14)
+
+
+### Features
+
+* action ([9e8c339](https://github.com/soockee/cybersocke.com/commit/9e8c339f1a65082d50bc1620f26aa5466c9c00e1))
+* add basic blog ([cf0086a](https://github.com/soockee/cybersocke.com/commit/cf0086aa0b1b31a2cdb767a8a49222c2196a4d09))
+* add basic post rendering ([27b531f](https://github.com/soockee/cybersocke.com/commit/27b531f5c92956ff4feea83f21b6cfcdd1e3fa9a))
+* add date to posts ([d46633c](https://github.com/soockee/cybersocke.com/commit/d46633c52ff992e99cd419d421392cea899640f5))
+* add gcp post ([8261b3d](https://github.com/soockee/cybersocke.com/commit/8261b3d93581e8b7e1f44a49bd870a7dcc71d43c))
+* add posts handling ([269fd47](https://github.com/soockee/cybersocke.com/commit/269fd470090f1b4e58ab545bea7adf8d6e429b7e))
+* add secrets ([29469b4](https://github.com/soockee/cybersocke.com/commit/29469b43fef268ae3e6b5a1e3090532bc62f53d3))
+* add tags to posts ([b191d3a](https://github.com/soockee/cybersocke.com/commit/b191d3a6faa0a8ed5c639b1edab777607fb4b2b9))
+* update ([4f3e695](https://github.com/soockee/cybersocke.com/commit/4f3e695469c6fb7df08cc685a9dcbd1564e43fc4))
+
+
+### Bug Fixes
+
+* add fileserver back ([3b5a998](https://github.com/soockee/cybersocke.com/commit/3b5a998418e232caa12d3a711500a7e9b6963dfd))
+* add fire emoji to error page ([aaa4f80](https://github.com/soockee/cybersocke.com/commit/aaa4f806e845237b4ec48bf99f665621d410e2c5))
+* go mod tidy ([dcdb00c](https://github.com/soockee/cybersocke.com/commit/dcdb00c02db7a1d15352861ea042f4eeac2e8321))
+* scope css to navbar ([1f50675](https://github.com/soockee/cybersocke.com/commit/1f50675e628c87c1346e09a81740034c5335cdfc))
+* update post ([4164162](https://github.com/soockee/cybersocke.com/commit/4164162ad0ef446c41b26d1a46499512de72e9b3))
+* update time of release of storage post ([8bdd15a](https://github.com/soockee/cybersocke.com/commit/8bdd15afc598d6768dbe132a9ed8da48216aa915))
+* use gcss for styles ([384955f](https://github.com/soockee/cybersocke.com/commit/384955fae430eb3693f936a6213f1f53d5424e2e))
+
 ## [1.4.0](https://github.com/soockee/cybersocke.com/compare/v1.3.1...v1.4.0) (2025-01-14)
 
 
