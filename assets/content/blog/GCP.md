@@ -94,3 +94,4 @@ Resources:
 ## Sources
 
 - todo ☺️ collect some stuff
+- [examples pages](https://soockee.github.io/golang-knowledge/)
