@@ -54,6 +54,26 @@ Topics:
 - Resources:
     - [github doc](https://docs.github.com/en/actions)
 
+#  Deployment of a GitHub Pages Project
+
+Goal: Create a GitHub Pages site to document the learning process.
+
+Topics:
+
+- Setting up a new GitHub repository for the project.
+- Enabling GitHub Pages in the repository settings.
+- Creating content for the page:
+    - Notes on Go basics.
+    - Explanation of CI/CD concepts and workflows.
+    - Tips on Git and GitHub usage.
+    - Insights into GCP tools and modules.
+- Writing the site using Markdown or HTML/CSS.
+- Automating deployment with a GitHub Actions workflow.
+- Outcome: A functional GitHub Pages website showcasing your learning journey.
+- Resources:
+    - GitHub Pages Documentation
+    - GitHub Actions for Pages Deployment
+
 # GCP Project: Implementing a Service-Specific Module
 Goal: Develop a module to manage labels for a GCP service.
 
