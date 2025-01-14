@@ -5,7 +5,7 @@ tags: ["cloud", "storage", "distributed systems"]
 date: 2025-01-14
 description: "Entry-Level project to get to know the cloud."
 ---
-# Resource Labeling in GCP: I
+# Resource Labeling in GCP: Understanding Software Development Key Concepts
 ## Introduction
 
 In this project, we will gradually build the foundational knowledge needed to implement a service-specific module in Google Cloud Platform (GCP). 
