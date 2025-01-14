@@ -73,10 +73,4 @@ Resources:
 
 ## Sources
 
-- [Understanding Object Storage and Block Storage Use Cases](https://cloudacademy.com/blog/object-storage-block-storage/)
-- [Distributed File Systems in Linux](https://blog.ordix.de/technologien/verteilte-dateisysteme-unter-linux)
-- [Wikipedia: Object Storage](https://en.wikipedia.org/wiki/Object_storage#Cloud_storage)
-- [Amazon: When to Choose EFS](https://aws.amazon.com/efs/when-to-choose-efs/)
-- [A Survey of Distributed File System Technology by Jakob Blomer, 2014](https://indico.cern.ch/event/258092/contributions/1588500/attachments/454164/629566/dfs.pdf)
-- [HDFS vs Ceph](https://docs.microsoft.com/en-us/learn/modules/cmu-case-study-distributed-file-systems/4-hadoop-versus-ceph)
-
+- todo ☺️ collect some stuff
