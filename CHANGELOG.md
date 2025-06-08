@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/soockee/cybersocke.com/compare/v1.5.0...v1.6.0) (2025-06-08)
+
+
+### Features
+
+* implement firebase auth ([cc8b153](https://github.com/soockee/cybersocke.com/commit/cc8b153938194ae9872429ca0801a58d849200de))
+
 ## [1.5.0](https://github.com/soockee/cybersocke.com/compare/v1.4.0...v1.5.0) (2025-01-14)
 
 
