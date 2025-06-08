@@ -26,3 +26,7 @@ func (s *PostService) GetPosts() map[string]storage.Post {
 func (s *PostService) SearchPost(id string) []string {
 	return []string{}
 }
+
+func (s *PostService) CreatePost(id string) {
+	s.CreatePost(id)
+}

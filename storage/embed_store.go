@@ -2,6 +2,7 @@ package storage
 
 import (
 	"embed"
+	"errors"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -10,9 +11,9 @@ import (
 )
 
 type EmbedStore struct {
-	assets    embed.FS
-	posts map[string]Post
-	fs        http.Handler
+	assets embed.FS
+	posts  map[string]Post
+	fs     http.Handler
 }
 
 func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, error) {
@@ -49,9 +50,9 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 	fs := http.FileServer(http.FS(public))
 
 	return &EmbedStore{
-		assets:    assets,
-		posts: posts,
-		fs:        fs,
+		assets: assets,
+		posts:  posts,
+		fs:     fs,
 	}, nil
 }
 
@@ -78,4 +79,8 @@ func (s *EmbedStore) GetAbout() []byte {
 
 func (s *EmbedStore) GetFS() http.Handler {
 	return s.fs
+}
+
+func (s *EmbedStore) CreatePost(post Post) error {
+	return errors.New("method not implemented")
 }

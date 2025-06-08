@@ -1,0 +1,51 @@
+package components
+
+type LoginViewProps struct {
+	FirebaseInsensitiveAPIKey string
+	FirebaseAuthDomain        string
+}
+
+templ Login(props LoginViewProps) {
+	@LoginJS(props)
+	<div class="login-container">
+		<h1>Login</h1>
+		<p>Login with your Google account to continue.</p>
+		<button onclick="loginWithGoogle()">Login with Google</button>
+	</div>
+}
+
+templ LoginJS(props LoginViewProps) {
+	<script src="assets/js/11.9.0-firebase-app-compat.js"></script>
+	<script src="assets/js/11.9.0-firebase-auth-compat.js"></script>
+	<script>
+    const key = {{ props.FirebaseInsensitiveAPIKey }}
+    const authDomain = {{ props.FirebaseAuthDomain }}
+    firebase.initializeApp({
+      apiKey: key,
+      authDomain: authDomain,
+    });
+
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    function loginWithGoogle() {
+      auth.signInWithPopup(provider)
+        .then(result => result.user.getIdToken())
+        .then(idToken => {
+          return fetch("/auth/google/callback", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ idToken })
+          });
+        })
+        .then(response => {
+          if (!response.ok) throw new Error("Login failed");
+          window.location.href = "/";
+        })
+        .catch(console.error);
+    }
+
+  </script>
+}

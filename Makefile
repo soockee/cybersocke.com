@@ -15,12 +15,12 @@ build:
 	$(GOBUILD) -o $(BINARY_NAME) -v
 
 test:
-	$(GOTEST) -v ./...
+	$(GOTEST) -v ./
 
 clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 
 run:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./...
+	$(GOBUILD) -o $(BINARY_NAME) -v ./
 	./$(BINARY_NAME)

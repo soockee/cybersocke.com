@@ -1,0 +1,13 @@
+services:
+  cybersocke:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/certs:ro
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -5,19 +5,24 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/gorilla/csrf"
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/services"
 )
 
 type HomeHandler struct {
-	Log     *slog.Logger
-	service *services.PostService
+	Log         *slog.Logger
+	postService *services.PostService
+	authService *services.AuthService
+	csrfService *services.CSFRService
 }
 
-func NewHomeHandler(service *services.PostService, log *slog.Logger) *HomeHandler {
+func NewHomeHandler(post *services.PostService, auth *services.AuthService, csrf *services.CSFRService, log *slog.Logger) *HomeHandler {
 	return &HomeHandler{
-		Log: log,
-		service: service,
+		Log:         log,
+		postService: post,
+		authService: auth,
+		csrfService: csrf,
 	}
 }
 
@@ -33,9 +38,23 @@ func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	posts := h.service.GetPosts()
+	posts := h.postService.GetPosts()
+
+	// default values
+	authed := false
+	var csrfToken string
+	cookie, err := r.Cookie("session")
+	if err == nil {
+		if _, err := h.authService.Verify(cookie.Value, r.Context()); err == nil {
+			authed = true
+			csrfToken = csrf.Token(r)
+		}
+	}
+
 	h.View(w, r, components.HomeViewProps{
-		Posts: posts,
+		Posts:     posts,
+		CSRFToken: csrfToken,
+		Authed:    authed,
 	})
 	return nil
 }

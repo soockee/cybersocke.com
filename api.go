@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 
 	"github.com/soockee/cybersocke.com/components"
@@ -27,6 +29,7 @@ type ApiServer struct {
 	domainName string
 	logger     *slog.Logger
 	assets     embed.FS
+	ctx        context.Context
 }
 
 func NewApiServer(store storage.Storage, logger *slog.Logger, assets embed.FS) *ApiServer {
@@ -35,21 +38,23 @@ func NewApiServer(store storage.Storage, logger *slog.Logger, assets embed.FS) *
 		domainName: "cybersocke.com",
 		logger:     logger,
 		assets:     assets,
+		ctx:        context.Background(),
 	}
 	return server
 }
 
 func (s *ApiServer) Run() {
 	loggingMiddleware := middleware.WithLogging(s.logger)
-	sessionMiddleware := middleware.WithSession(s.logger, true, true)
+
 	r := s.InitRoutes()
-	router := sessionMiddleware(loggingMiddleware(r))
+
+	router := loggingMiddleware(r)
 
 	httpServer := &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  120 * time.Second,
-		Addr:         ":http",
+		Addr:         ":8080",
 		Handler:      router,
 		ErrorLog:     slog.NewLogLogger(s.logger.Handler(), slog.LevelDebug),
 	}
@@ -61,23 +66,37 @@ func (s *ApiServer) Run() {
 }
 
 func (s *ApiServer) InitRoutes() *mux.Router {
-	router := mux.NewRouter()
+	rootRouter := mux.NewRouter()
+	secret := os.Getenv("CSRF_SECRET")
 
 	postService := services.NewPostService(s.store)
 	aboutService := services.NewAboutService(s.store)
+	csfrService := services.NewCSFRService(s.ctx)
+	authService, err := services.NewAuthService(s.ctx)
+	if err != nil {
+		s.logger.Error("Failed to initialize AuthService", slog.Any("err", err))
+		os.Exit(1)
+	}
 
-	homeHandler := handlers.NewHomeHandler(postService, s.logger)
-	router.HandleFunc("/", makeHTTPHandleFunc(homeHandler.ServeHTTP))
+	// Unprotected routes
+	rootRouter.HandleFunc("/auth", makeHTTPHandleFunc(handlers.NewLoginHandler(s.logger).ServeHTTP))
+	rootRouter.HandleFunc("/auth/google/callback", makeHTTPHandleFunc(handlers.NewAuthCallbackHandler(s.logger).ServeHTTP))
+	rootRouter.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", s.store.GetFS()))
 
-	aboutHandler := handlers.NewAboutHandler(aboutService, s.logger)
-	router.HandleFunc("/about", makeHTTPHandleFunc(aboutHandler.ServeHTTP))
+	// Public GETs
+	rootRouter.HandleFunc("/about", makeHTTPHandleFunc(handlers.NewAboutHandler(aboutService, s.logger).ServeHTTP))
+	rootRouter.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP))
 
-	postHandler := handlers.NewPostHandler(postService, s.logger)
-	router.HandleFunc("/posts/{id}", makeHTTPHandleFunc(postHandler.ServeHTTP))
+	// Subrouter for CSRF-protected routes (e.g., writes from authenticated users)
+	protected := rootRouter.PathPrefix("/").Subrouter()
+	protected.Use(csrf.Protect([]byte(secret)))
+	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, csfrService, s.logger).ServeHTTP))
+	protected.HandleFunc("/write-protected", authenticate(makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP), authService)).Methods("POST")
 
-	router.PathPrefix("/assets/").Handler(http.StripPrefix("/assets/", s.store.GetFS()))
+	// Separate from CSRF – protected by auth only
+	rootRouter.HandleFunc("/protected", authenticate(makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP), authService)).Methods("GET")
 
-	return router
+	return rootRouter
 }
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
@@ -88,12 +107,41 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	})
 }
 
+func authenticate(next http.HandlerFunc, authService *services.AuthService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// get session cookie
+		cookie, err := r.Cookie("session")
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		// Verify ID token
+		token, err := authService.Verify(cookie.Value, r.Context())
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "user", token)
+		next(w, r.WithContext(ctx))
+	}
+}
+
 func cors(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
 		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		next(w, r)
+	}
+}
+
+func CSFR(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := csrf.Token(r)
+		w.Header().Set("X-CSRF-Token", token)
 
 		next(w, r)
 	}

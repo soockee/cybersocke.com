@@ -1,12 +1,11 @@
 package components
 
-import (
-	"github.com/soockee/cybersocke.com/storage"
-)
-
+import "github.com/soockee/cybersocke.com/storage"
 
 type HomeViewProps struct {
-	Posts map[string]storage.Post
+	Posts     map[string]storage.Post
+	CSRFToken string
+	Authed    bool
 }
 
 func getNavItems() []NavItem {
@@ -22,13 +21,21 @@ templ Home(props HomeViewProps) {
 		<div>
 			for _, post := range  storage.SortPostMap(props.Posts) {
 				@PostCard(PostCardProps{
-					Title: post.Meta.Name,
+					Title:       post.Meta.Name,
 					Description: post.Meta.Description,
-					Slug: post.Meta.Slug,
-					Date: post.Meta.Date,
-					Tags: post.Meta.Tags,
+					Slug:        post.Meta.Slug,
+					Date:        post.Meta.Date,
+					Tags:        post.Meta.Tags,
 				})
-			} 
+			}
+			if props.Authed {
+				// Dummy green div for now, will be replaced by real upload box
+				<div style="background-color: green; padding: 20px;">
+					Upload Box Placeholder
+					<!-- Embed CSRF token in hidden input for JS form POST -->
+					<input type="hidden" id="csrf-token" value={ props.CSRFToken }/>
+				</div>
+			}
 		</div>
 	}
 }

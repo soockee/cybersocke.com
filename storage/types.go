@@ -12,6 +12,8 @@ type Storage interface {
 	GetPosts() map[string]Post
 	GetAbout() []byte
 	GetFS() http.Handler
+
+	CreatePost(post Post) error
 }
 
 type PostMeta struct {
