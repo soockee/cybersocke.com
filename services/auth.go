@@ -32,6 +32,7 @@ func NewAuthService(ctx context.Context) (*AuthService, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &AuthService{
 		App:    app,
 		Client: client,

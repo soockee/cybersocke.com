@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"io/fs"
@@ -77,10 +78,10 @@ func (s *EmbedStore) GetAbout() []byte {
 	return content
 }
 
-func (s *EmbedStore) GetFS() http.Handler {
+func (s *EmbedStore) GetAssets() http.Handler {
 	return s.fs
 }
 
-func (s *EmbedStore) CreatePost(post Post) error {
-	return errors.New("method not implemented")
+func (s *EmbedStore) CreatePost(post []byte, ctx context.Context) error {
+	return errors.New("method not supported for embed store")
 }

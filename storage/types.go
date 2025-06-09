@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"maps"
 	"net/http"
 	"slices"
@@ -11,9 +12,9 @@ type Storage interface {
 	GetPost(id string) Post
 	GetPosts() map[string]Post
 	GetAbout() []byte
-	GetFS() http.Handler
+	GetAssets() http.Handler
 
-	CreatePost(post Post) error
+	CreatePost(data []byte, ctx context.Context) error
 }
 
 type PostMeta struct {

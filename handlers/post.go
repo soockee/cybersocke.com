@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,14 +14,14 @@ import (
 )
 
 type PostHandler struct {
-	Log     *slog.Logger
-	service *services.PostService
+	Log         *slog.Logger
+	postService *services.PostService
 }
 
-func NewPostHandler(service *services.PostService, log *slog.Logger) *PostHandler {
+func NewPostHandler(postService *services.PostService, log *slog.Logger) *PostHandler {
 	return &PostHandler{
-		service: service,
-		Log:     log,
+		Log:         log,
+		postService: postService,
 	}
 }
 
@@ -37,7 +38,7 @@ func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 
 func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	idStr := mux.Vars(r)["id"]
-	data := h.service.GetPost(idStr)
+	data := h.postService.GetPost(idStr)
 	md := services.RenderMD(data)
 	h.View(w, r, components.PostViewProps{
 		Content: md,
@@ -48,19 +49,21 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to read file", http.StatusBadRequest)
-		return nil
+		return err
 	}
 	defer file.Close()
 
 	content, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file content", http.StatusInternalServerError)
-		return nil
+		return err
 	}
 
 	// TODO: handle markdown content
 	fmt.Println(string(content))
+
+	cookie, err := r.Cookie("session")
+	ctx := context.WithValue(r.Context(), "session", cookie.Value)
+	h.postService.CreatePost(content, ctx)
 	return nil
 }
 
