@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/soockee/cybersocke.com/compare/v1.6.0...v1.7.0) (2025-06-09)
+
+
+### Features
+
+* add post upload box ([010a86d](https://github.com/soockee/cybersocke.com/commit/010a86df82697c5160030505e26c1652066ecbf3))
+
 ## [1.6.0](https://github.com/soockee/cybersocke.com/compare/v1.5.0...v1.6.0) (2025-06-08)
 
 
