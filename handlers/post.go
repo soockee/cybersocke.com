@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -44,7 +46,22 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
-	return errors.New("method not allowed")
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Failed to read file", http.StatusBadRequest)
+		return nil
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read file content", http.StatusInternalServerError)
+		return nil
+	}
+
+	// TODO: handle markdown content
+	fmt.Println(string(content))
+	return nil
 }
 
 func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props components.PostViewProps) {

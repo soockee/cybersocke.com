@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 
 	"github.com/soockee/cybersocke.com/components"
@@ -44,11 +43,7 @@ func NewApiServer(store storage.Storage, logger *slog.Logger, assets embed.FS) *
 }
 
 func (s *ApiServer) Run() {
-	loggingMiddleware := middleware.WithLogging(s.logger)
-
-	r := s.InitRoutes()
-
-	router := loggingMiddleware(r)
+	router := s.InitRoutes()
 
 	httpServer := &http.Server{
 		ReadTimeout:  5 * time.Second,
@@ -67,7 +62,6 @@ func (s *ApiServer) Run() {
 
 func (s *ApiServer) InitRoutes() *mux.Router {
 	rootRouter := mux.NewRouter()
-	secret := os.Getenv("CSRF_SECRET")
 
 	postService := services.NewPostService(s.store)
 	aboutService := services.NewAboutService(s.store)
@@ -78,6 +72,12 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 		os.Exit(1)
 	}
 
+	rootRouter.Use(
+		middleware.WithLogging(s.logger),
+		middleware.WithDebugContext(),
+		middleware.WithCORS(),
+	)
+
 	// Unprotected routes
 	rootRouter.HandleFunc("/auth", makeHTTPHandleFunc(handlers.NewLoginHandler(s.logger).ServeHTTP))
 	rootRouter.HandleFunc("/auth/google/callback", makeHTTPHandleFunc(handlers.NewAuthCallbackHandler(s.logger).ServeHTTP))
@@ -85,26 +85,30 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 
 	// Public GETs
 	rootRouter.HandleFunc("/about", makeHTTPHandleFunc(handlers.NewAboutHandler(aboutService, s.logger).ServeHTTP))
-	rootRouter.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP))
+	rootRouter.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP)).Methods("GET")
 
 	// Subrouter for CSRF-protected routes (e.g., writes from authenticated users)
 	protected := rootRouter.PathPrefix("/").Subrouter()
-	protected.Use(csrf.Protect([]byte(secret)))
+	protected.Use(
+		middleware.WithCSRF(),
+	)
 	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, csfrService, s.logger).ServeHTTP))
-	protected.HandleFunc("/write-protected", authenticate(makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP), authService)).Methods("POST")
 
-	// Separate from CSRF – protected by auth only
-	rootRouter.HandleFunc("/protected", authenticate(makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP), authService)).Methods("GET")
+	authenticated := protected.PathPrefix("/").Subrouter()
+	authenticated.Use(
+		middleware.WithAuthentication(authService),
+	)
+	authenticated.HandleFunc("/posts", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP)).Methods("POST")
 
 	return rootRouter
 }
 
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
-	return cors(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
 			components.Error(err.Error()).Render(r.Context(), w)
 		}
-	})
+	}
 }
 
 func authenticate(next http.HandlerFunc, authService *services.AuthService) http.HandlerFunc {
@@ -127,22 +131,22 @@ func authenticate(next http.HandlerFunc, authService *services.AuthService) http
 	}
 }
 
-func cors(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.Header().Add("Access-Control-Allow-Credentials", "true")
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+// func cors(next http.HandlerFunc) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		w.Header().Add("Access-Control-Allow-Origin", "*")
+// 		w.Header().Add("Access-Control-Allow-Credentials", "true")
+// 		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+// 		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
-		next(w, r)
-	}
-}
+// 		next(w, r)
+// 	}
+// }
 
-func CSFR(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token := csrf.Token(r)
-		w.Header().Set("X-CSRF-Token", token)
+// func CSFR(next http.HandlerFunc) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		token := csrf.Token(r)
+// 		w.Header().Set("X-CSRF-Token", token)
 
-		next(w, r)
-	}
-}
+// 		next(w, r)
+// 	}
+// }
