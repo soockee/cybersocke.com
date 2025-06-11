@@ -15,15 +15,13 @@ type HomeHandler struct {
 	Log         *slog.Logger
 	postService *services.PostService
 	authService *services.AuthService
-	csrfService *services.CSFRService
 }
 
-func NewHomeHandler(post *services.PostService, auth *services.AuthService, csrf *services.CSFRService, log *slog.Logger) *HomeHandler {
+func NewHomeHandler(post *services.PostService, auth *services.AuthService, log *slog.Logger) *HomeHandler {
 	return &HomeHandler{
 		Log:         log,
 		postService: post,
 		authService: auth,
-		csrfService: csrf,
 	}
 }
 
@@ -46,11 +44,11 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 
 	// default values
 	authed := false
-	var csrfToken string
+	csrfToken := csrf.Token(r)
+
 	if token, ok := middleware.GetSession(r).Values["id_token"].(string); ok {
 		if _, err := h.authService.Verify(token, r.Context()); err == nil {
 			authed = true
-			csrfToken = csrf.Token(r)
 		}
 	}
 

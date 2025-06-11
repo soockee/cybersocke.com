@@ -84,11 +84,10 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 	}
 	postService := services.NewPostService(s.gcsStore, authService)
 	aboutService := services.NewAboutService(s.embedStore)
-	csfrService := services.NewCSFRService(s.ctx)
 
 	rootRouter.Use(
 		middleware.WithLogging(s.logger),
-		middleware.WithDebugContext(),
+		// middleware.WithDebugContext(),
 		middleware.WithCORS(),
 		middleware.WithSession(s.sessionStore),
 	)
@@ -107,7 +106,7 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 	protected.Use(
 		middleware.WithCSRF(),
 	)
-	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, csfrService, s.logger).ServeHTTP))
+	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, s.logger).ServeHTTP))
 
 	authenticated := protected.PathPrefix("/").Subrouter()
 	authenticated.Use(
