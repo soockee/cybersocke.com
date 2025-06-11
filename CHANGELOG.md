@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/soockee/cybersocke.com/compare/v1.8.0...v1.8.1) (2025-06-11)
+
+
+### Bug Fixes
+
+* remove debug logs, add cache hit logs ([01bd455](https://github.com/soockee/cybersocke.com/commit/01bd455e863efc3f0178fa908524254cb4c8d9dc))
+
 ## [1.8.0](https://github.com/soockee/cybersocke.com/compare/v1.7.0...v1.8.0) (2025-06-11)
 
 
