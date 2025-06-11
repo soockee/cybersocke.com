@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.3](https://github.com/soockee/cybersocke.com/compare/v1.8.2...v1.8.3) (2025-06-11)
+
+
+### Bug Fixes
+
+* uploadbox in seperate js ([f44a61d](https://github.com/soockee/cybersocke.com/commit/f44a61dc0bf36cf5c806078bc7788316d27cded6))
+
 ## [1.8.2](https://github.com/soockee/cybersocke.com/compare/v1.8.1...v1.8.2) (2025-06-11)
 
 
