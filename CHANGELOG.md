@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/soockee/cybersocke.com/compare/v1.7.0...v1.8.0) (2025-06-11)
+
+
+### Features
+
+* add post upload via gcs ([e981492](https://github.com/soockee/cybersocke.com/commit/e981492351474c124d91a571b6c65df54e35e27d))
+* add session store ([b407cd6](https://github.com/soockee/cybersocke.com/commit/b407cd66bdef43549d9b80e5aa2ad0f264a592c8))
+
 ## [1.7.0](https://github.com/soockee/cybersocke.com/compare/v1.6.0...v1.7.0) (2025-06-09)
 
 
