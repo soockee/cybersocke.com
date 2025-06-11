@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log/slog"
 	"os"
@@ -20,17 +21,17 @@ func main() {
 	logger.Info("Setup Embed Storage...")
 	embedStore, err := storage.NewEmbedStore("assets/content/blog", "assets/public", assets)
 	if err != nil {
-		logger.Error("Failed to setup storage", slog.Any("error msg", err))
+		logger.Error("Failed to setup embedStore", slog.Any("error msg", err))
 		os.Exit(1)
 	}
-
+	ctx := context.Background()
 	logger.Info("Setup GCS Storage...")
-	gcsStroe, err := storage.NewGCSStore()
+	gcsStore, err := storage.NewGCSStore(ctx)
 	if err != nil {
-		logger.Error("Failed to setup storage", slog.Any("error msg", err))
+		logger.Error("Failed to setup gcsStore", slog.Any("error msg", err))
 		os.Exit(1)
 	}
 
-	server := NewApiServer(embedStore, gcsStroe, logger, assets)
+	server := NewApiServer(embedStore, gcsStore, logger, assets)
 	server.Run()
 }

@@ -1,10 +1,14 @@
 package components
 
+type ErrorViewProps struct {
+	Messages []string
+}
 
-templ Error(msg string) {
-	@layout("Error", []NavItem{NewNavItem("Home", "/")}) {
-		<div>Error 🔥</div>
-		<div>{msg}</div>
-
-	}
+templ Error(props ErrorViewProps) {
+	<div>Error 🔥</div>
+	<div>
+		for _, message := range props.Messages {
+			<div>{ message }</div>
+		}
+	</div>
 }

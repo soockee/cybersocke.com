@@ -9,8 +9,10 @@ require (
 	firebase.google.com/go/v4 v4.16.0
 	github.com/AccentDesign/gcss v0.1.2
 	github.com/a-h/templ v0.3.898
+	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/gorilla/csrf v1.7.3
 	github.com/gorilla/handlers v1.5.2
+	github.com/gorilla/sessions v1.4.0
 	github.com/yuin/goldmark v1.7.12
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.236.0
@@ -74,7 +76,7 @@ require (
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/google/uuid v1.6.0
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect

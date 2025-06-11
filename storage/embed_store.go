@@ -57,12 +57,38 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 	}, nil
 }
 
-func (s *EmbedStore) GetPost(id string) Post {
-	return s.posts[id]
+// GetPost returns a deep copy of the stored post to prevent external modification
+func (s *EmbedStore) GetPost(id string, ctx context.Context) (*Post, error) {
+	orig, exists := s.posts[id]
+	if !exists {
+		return nil, errors.New("post not found")
+	}
+	if orig.Content == nil {
+		return nil, errors.New("post content is empty")
+	}
+
+	copyContent := make([]byte, len(orig.Content))
+	copy(copyContent, orig.Content)
+
+	p := &Post{
+		Meta:    orig.Meta,
+		Content: copyContent,
+	}
+	return p, nil
 }
 
-func (s *EmbedStore) GetPosts() map[string]Post {
-	return s.posts
+// GetPosts returns copies of all posts
+func (s *EmbedStore) GetPosts(ctx context.Context) (map[string]*Post, error) {
+	result := make(map[string]*Post, len(s.posts))
+	for id, orig := range s.posts {
+		copyContent := make([]byte, len(orig.Content))
+		copy(copyContent, orig.Content)
+		result[id] = &Post{
+			Meta:    orig.Meta,
+			Content: copyContent,
+		}
+	}
+	return result, nil
 }
 
 func (s *EmbedStore) GetAbout() []byte {

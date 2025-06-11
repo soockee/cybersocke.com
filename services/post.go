@@ -18,16 +18,19 @@ func NewPostService(store storage.Storage, authService *AuthService) *PostServic
 	}
 }
 
-func (s *PostService) GetPost(id string) []byte {
-	post := s.store.GetPost(id)
-	return post.Content
+func (s *PostService) GetPost(slug string, ctx context.Context) ([]byte, error) {
+	post, err := s.store.GetPost(slug, ctx)
+	if err != nil {
+		return nil, err
+	}
+	return post.Content, nil
 }
 
-func (s *PostService) GetPosts() map[string]storage.Post {
-	return s.store.GetPosts()
+func (s *PostService) GetPosts(ctx context.Context) (map[string]*storage.Post, error) {
+	return s.store.GetPosts(ctx)
 }
 
-func (s *PostService) SearchPost(id string) []string {
+func (s *PostService) SearchPost(slug string, ctx context.Context) []string {
 	return []string{}
 }
 

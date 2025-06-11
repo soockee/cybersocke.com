@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -41,15 +42,10 @@ func (h *AuthCallbackHandler) Post(w http.ResponseWriter, r *http.Request) error
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return err
 	}
-	// Set session (e.g., secure cookie)
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    req.IDToken,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+
+	session := middleware.GetSession(r)
+	session.Values["id_token"] = req.IDToken
+	session.Save(r, w)
 	return nil
 }
 

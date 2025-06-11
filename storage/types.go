@@ -9,8 +9,8 @@ import (
 )
 
 type Storage interface {
-	GetPost(id string) Post
-	GetPosts() map[string]Post
+	GetPost(id string, ctx context.Context) (*Post, error)
+	GetPosts(ctx context.Context) (map[string]*Post, error)
 	GetAbout() []byte
 	GetAssets() http.Handler
 
@@ -30,18 +30,18 @@ type Post struct {
 	Content []byte
 }
 
-func SortPostMap(posts map[string]Post) []Post {
+func SortPostMap(posts map[string]*Post) []*Post {
 	it := maps.Values(posts)
-	s := []Post{}
+	s := []*Post{}
 	for post := range it {
 		s = append(s, post)
 	}
 	return SortPostsByDate(s)
 }
 
-func SortPostsByDate(posts []Post) []Post {
+func SortPostsByDate(posts []*Post) []*Post {
 	// Sort in descending order (newest first)
-	slices.SortFunc(posts, func(a, b Post) int {
+	slices.SortFunc(posts, func(a, b *Post) int {
 		if a.Meta.Date.After(b.Meta.Date) {
 			return -1 // a is newer, comes first
 		} else if a.Meta.Date.Before(b.Meta.Date) {

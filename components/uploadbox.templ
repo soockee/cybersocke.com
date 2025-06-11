@@ -51,10 +51,10 @@ templ UploadBox(csrfToken string) {
 					body: formData
 				});
 				if (!response.ok) throw new Error("Upload failed");
-				alert("Upload successful");
+				// alert("Upload successful");
 			} catch (err) {
 				console.error(err);
-				alert("Upload error");
+				// alert("Upload error");
 			}
 		}
 	</script>

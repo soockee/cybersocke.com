@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/csrf"
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -38,19 +40,28 @@ func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	posts := h.postService.GetPosts()
+	posts, err := h.postService.GetPosts(r.Context())
+	if err != nil {
+		return err
+	}
 
 	// default values
 	authed := false
 	var csrfToken string
-	cookie, err := r.Cookie("session")
-	if err == nil {
-		if _, err := h.authService.Verify(cookie.Value, r.Context()); err == nil {
+	if token, ok := middleware.GetSession(r).Values["id_token"].(string); ok {
+		if _, err := h.authService.Verify(token, r.Context()); err == nil {
 			authed = true
 			csrfToken = csrf.Token(r)
 		}
 	}
+	session := middleware.GetSession(r)
+	slog.Info("Session values")
 
+	for key, value := range session.Values {
+		fmt.Printf("Session key: %v, value: %v\n", key, value)
+	}
+
+	
 	h.View(w, r, components.HomeViewProps{
 		Posts:     posts,
 		CSRFToken: csrfToken,

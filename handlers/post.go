@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -38,7 +37,10 @@ func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 
 func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	idStr := mux.Vars(r)["id"]
-	data := h.postService.GetPost(idStr)
+	data, err := h.postService.GetPost(idStr, r.Context())
+	if err != nil {
+		return err
+	}
 	md := services.RenderMD(data)
 	h.View(w, r, components.PostViewProps{
 		Content: md,
@@ -60,10 +62,13 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 
 	// TODO: handle markdown content
 	fmt.Println(string(content))
+	if err != nil {
+		return err
+	}
 
-	cookie, err := r.Cookie("session")
-	ctx := context.WithValue(r.Context(), "session", cookie.Value)
-	h.postService.CreatePost(content, ctx)
+	if err := h.postService.CreatePost(content, r.Context()); err != nil {
+		return err
+	}
 	return nil
 }
 

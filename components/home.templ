@@ -3,7 +3,7 @@ package components
 import "github.com/soockee/cybersocke.com/storage"
 
 type HomeViewProps struct {
-	Posts     map[string]storage.Post
+	Posts     map[string]*storage.Post
 	CSRFToken string
 	Authed    bool
 }
