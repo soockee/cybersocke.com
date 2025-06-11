@@ -122,7 +122,6 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := middleware.GetSession(r)
-		s.Values["test"] = "test value" // Example session value
 		s.Save(r, w)
 		if err := f(w, r); err != nil {
 			// Save error in session, flash, or temporary store

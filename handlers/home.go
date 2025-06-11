@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -54,14 +53,7 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 			csrfToken = csrf.Token(r)
 		}
 	}
-	session := middleware.GetSession(r)
-	slog.Info("Session values")
 
-	for key, value := range session.Values {
-		fmt.Printf("Session key: %v, value: %v\n", key, value)
-	}
-
-	
 	h.View(w, r, components.HomeViewProps{
 		Posts:     posts,
 		CSRFToken: csrfToken,

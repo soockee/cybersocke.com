@@ -26,7 +26,7 @@ func main() {
 	}
 	ctx := context.Background()
 	logger.Info("Setup GCS Storage...")
-	gcsStore, err := storage.NewGCSStore(ctx)
+	gcsStore, err := storage.NewGCSStore(ctx, logger)
 	if err != nil {
 		logger.Error("Failed to setup gcsStore", slog.Any("error msg", err))
 		os.Exit(1)

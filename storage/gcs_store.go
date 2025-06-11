@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -33,6 +34,7 @@ type GCSStore struct {
 	bucketName string
 	clientRW   *http.Client
 	clientRO   *storage.Client
+	logger     *slog.Logger
 
 	cache *bigcache.BigCache
 
@@ -57,7 +59,7 @@ type GcpTokenRequest struct {
 	SubjectToken       string `json:"subjectToken"`
 }
 
-func NewGCSStore(ctx context.Context) (*GCSStore, error) {
+func NewGCSStore(ctx context.Context, logger *slog.Logger) (*GCSStore, error) {
 	gcpProjectId := os.Getenv("GCP_PROJECT_ID")
 	gcpWifPoolId := os.Getenv("GCP_WIF_POOL_ID")
 	gcpWifPoolProviderId := os.Getenv("GCP_WIF_POOL_PROVIDER_ID")
@@ -85,6 +87,7 @@ func NewGCSStore(ctx context.Context) (*GCSStore, error) {
 	cache, _ := bigcache.New(ctx, bigcache.DefaultConfig(1*time.Hour))
 
 	store := &GCSStore{
+		logger:               logger,
 		bucketName:           bucketName,
 		clientRW:             clientRW,
 		clientRO:             clientRO,
@@ -109,6 +112,7 @@ func NewGCSStore(ctx context.Context) (*GCSStore, error) {
 func (s *GCSStore) GetPost(slug string, ctx context.Context) (*Post, error) {
 	var raw []byte
 	if data, err := s.cache.Get(slug); err == nil {
+		s.logger.Info("Cache hit for post", slog.String("slug", slug))
 		raw = data
 	} else {
 		var err2 error
@@ -137,6 +141,7 @@ func (s *GCSStore) GetPosts(ctx context.Context) (map[string]*Post, error) {
 
 		var raw []byte
 		if data, err := s.cache.Get(slug); err == nil {
+			s.logger.Info("Cache hit for post", slog.String("slug", slug))
 			raw = data
 		} else {
 			raw, err = s.readWithExtension(ctx, slug, ".md")
