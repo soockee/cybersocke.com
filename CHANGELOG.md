@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.2](https://github.com/soockee/cybersocke.com/compare/v1.8.1...v1.8.2) (2025-06-11)
+
+
+### Bug Fixes
+
+* remove dev settings ([c55ed2e](https://github.com/soockee/cybersocke.com/commit/c55ed2e4bb964d182e40269fc5300bca9cb659da))
+
 ## [1.8.1](https://github.com/soockee/cybersocke.com/compare/v1.8.0...v1.8.1) (2025-06-11)
 
 
