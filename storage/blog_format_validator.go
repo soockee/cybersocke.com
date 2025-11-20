@@ -38,39 +38,12 @@ func (p *PostMeta) Validate() error {
 		return errors.New("description (or lead) is required")
 	}
 
-	// Legacy date field should be ignored; derive from updated or created.
-	p.Date = time.Time{}
-	parseAny := func(v any) time.Time {
-		switch val := v.(type) {
-		case string:
-			return parseTimestamp(val)
-		case map[string]any:
-			// attempt parsing keys first, then string values
-			for k := range val {
-				if ts := parseTimestamp(k); !ts.IsZero() {
-					return ts
-				}
-			}
-			for _, vv := range val {
-				if s, ok := vv.(string); ok {
-					if ts := parseTimestamp(s); !ts.IsZero() {
-						return ts
-					}
-				}
-			}
-		}
-		return time.Time{}
-	}
+	// Canonical date comes solely from `updated`; ignore created/modified fields.
 	updatedTs := parseTimestamp(p.UpdatedRaw)
-	createdTs := parseAny(p.Created)
-	if updatedTs.IsZero() && createdTs.IsZero() {
-		return errors.New("updated or created timestamp required")
+	if updatedTs.IsZero() {
+		return errors.New("updated timestamp required")
 	}
-	if updatedTs.After(createdTs) {
-		p.Date = updatedTs
-	} else {
-		p.Date = createdTs
-	}
+	p.Date = updatedTs
 	if p.Date.After(time.Now().Add(24 * time.Hour)) { // small clock skew tolerance
 		return errors.New("date cannot be in the far future")
 	}

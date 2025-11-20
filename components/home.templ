@@ -22,7 +22,7 @@ templ Home(props HomeViewProps) {
 			for _, post := range  storage.SortPostMap(props.Posts) {
 				@PostCard(PostCardProps{
 					Title:       post.Meta.Name,
-					Description: post.Meta.Description,
+					Description: post.Meta.Lead,
 					Slug:        post.Meta.Slug,
 					Date:        post.Meta.Date,
 					Tags:        post.Meta.Tags,

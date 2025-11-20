@@ -37,10 +37,20 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 			if err != nil {
 				return nil, err
 			}
-			posts[postMeta.Slug] = Post{
-				Meta:    postMeta,
-				Content: content,
+			// Derive slug & name if missing
+			if strings.TrimSpace(postMeta.Slug) == "" {
+				postMeta.Slug = file.Name()
 			}
+			if strings.TrimSpace(postMeta.Name) == "" {
+				postMeta.Name = DeriveDisplayName(postMeta.Slug)
+			}
+			// Derive date from updated field on read if zero
+			if postMeta.Date.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
+				if ts := parseTimestamp(postMeta.UpdatedRaw); !ts.IsZero() {
+					postMeta.Date = ts
+				}
+			}
+			posts[postMeta.Slug] = Post{Meta: postMeta, Content: content}
 		}
 	}
 

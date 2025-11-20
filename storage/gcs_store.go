@@ -101,6 +101,9 @@ func (s *GCSStore) GetPost(slug string, ctx context.Context) (*Post, error) {
 		return nil, err
 	}
 	postPtr.Meta.Slug = slug
+	if strings.TrimSpace(postPtr.Meta.Name) == "" {
+		postPtr.Meta.Name = DeriveDisplayName(slug)
+	}
 	return postPtr, nil
 }
 
@@ -139,6 +142,9 @@ func (s *GCSStore) GetPosts(ctx context.Context) (map[string]*Post, error) {
 			return nil, err
 		}
 		postPtr.Meta.Slug = filename
+		if strings.TrimSpace(postPtr.Meta.Name) == "" {
+			postPtr.Meta.Name = DeriveDisplayName(filename)
+		}
 		result[filename] = postPtr
 	}
 	return result, nil
@@ -248,6 +254,12 @@ func parsePost(raw []byte) (*Post, error) {
 	body, err := frontmatter.Parse(strings.NewReader(string(raw)), &meta)
 	if err != nil {
 		return nil, fmt.Errorf("parsing frontmatter: %w", err)
+	}
+	// Derive Date from updated if not already set (Validate not called on read path)
+	if meta.Date.IsZero() && strings.TrimSpace(meta.UpdatedRaw) != "" {
+		if ts := parseTimestamp(meta.UpdatedRaw); !ts.IsZero() {
+			meta.Date = ts
+		}
 	}
 	return &Post{Meta: meta, Content: body}, nil
 }

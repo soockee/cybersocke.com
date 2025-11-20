@@ -5,6 +5,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -59,4 +60,21 @@ func SortPostsByDate(posts []*Post) []*Post {
 		return 0 // Dates are equal
 	})
 	return posts
+}
+
+// DeriveDisplayName builds a human-friendly Title Case name from a slug that includes `.md`.
+// Example: "my-first-post.md" -> "My First Post".
+// Hyphens become spaces; each segment capitalized (first rune upper, rest unchanged).
+func DeriveDisplayName(slug string) string {
+	if slug == "" {
+		return ""
+	}
+	base := strings.TrimSuffix(slug, ".md")
+	parts := strings.Split(base, "-")
+	for i, p := range parts {
+		if len(p) > 0 {
+			parts[i] = strings.ToUpper(p[:1]) + p[1:]
+		}
+	}
+	return strings.Join(parts, " ")
 }

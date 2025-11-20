@@ -8,12 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/services"
-	"github.com/soockee/cybersocke.com/storage"
 )
 
 type PostHandler struct {
@@ -45,7 +43,7 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	processed := applySimpleDataview(post.Meta, post.Content)
+	processed := stripDataview(post.Content)
 	md := services.RenderMD(processed)
 	h.View(w, r, components.PostViewProps{Content: md})
 	return nil
@@ -78,44 +76,35 @@ func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props compone
 	components.Post(props).Render(r.Context(), w)
 }
 
-// hasWriterRole determines if the token has permission to write posts.
-// Accepts role patterns: role==writer/admin, roles slice contains writer/admin, writer=true or admin=true.
-// Role enforcement moved to middleware.WithRole("writer") for POST /posts.
-
-// applySimpleDataview performs minimal inline dataview substitution:
-// Replaces occurrences of `= this.<field>` inside backticks with the frontmatter value.
-// Only supports direct field lookup; no expressions.
-func applySimpleDataview(meta storage.PostMeta, content []byte) []byte {
+// stripDataview removes or comments out Obsidian dataview / callout constructs so they don't render.
+// Rules:
+// 1. Lines starting with "> [!" (callouts like > [!Summary]) are removed.
+// 2. Inline code segments of the form `= this.<field>` are stripped entirely.
+// 3. The rest of the content is returned unchanged.
+func stripDataview(content []byte) []byte {
 	lines := bytes.Split(content, []byte("\n"))
-	replacer := func(expr string) string {
-		field := strings.TrimPrefix(expr, "= this.")
-		field = strings.TrimSpace(field)
-		switch field {
-		case "lead":
-			return meta.Lead
-		case "description":
-			return meta.Description
-		case "license":
-			return meta.License
-		case "template_type":
-			return meta.TemplateType
-		case "template_version":
-			return meta.TemplateVersion
-		default:
-			return "" // unknown field -> empty
-		}
-	}
 	for i, ln := range lines {
-		if bytes.Contains(ln, []byte("`= this.")) {
-			segments := bytes.Split(ln, []byte("`"))
-			for j := 0; j < len(segments); j++ {
-				seg := string(segments[j])
-				if strings.HasPrefix(seg, "= this.") {
-					val := replacer(seg)
-					segments[j] = []byte(val)
-				}
+		trimmed := bytes.TrimSpace(ln)
+		if bytes.HasPrefix(trimmed, []byte("> [!")) {
+			// Remove callout line
+			lines[i] = []byte("")
+			continue
+		}
+		// Remove inline dataview expressions enclosed in backticks
+		for bytes.Contains(lines[i], []byte("`= this.")) {
+			start := bytes.Index(lines[i], []byte("`= this."))
+			if start == -1 {
+				break
 			}
-			lines[i] = bytes.Join(segments, []byte("`"))
+			rest := lines[i][start+1:] // skip initial backtick
+			end := bytes.IndexByte(rest, '`')
+			if end == -1 {
+				// No closing backtick: remove from start to end of line
+				lines[i] = lines[i][:start]
+				break
+			}
+			// Remove the whole `= this....` segment including both backticks
+			lines[i] = append(lines[i][:start], rest[end+1:]...)
 		}
 	}
 	return bytes.Join(lines, []byte("\n"))
