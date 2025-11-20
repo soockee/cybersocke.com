@@ -1,25 +1,82 @@
 # cybersocke.com
 
-add env:
+This repository contains the server for cybersocke.com and a small utility program used to set Firebase claims (`cmd/set_firebase_claims`).
+
+Below are the environment variables actually read by the code (from `config/config.go` and the utility's `claimconfig`). Documented are required and optional variables and which program they apply to.
+
+Loading environment from a `.env` file (example):
+
 ```bash
 set -o allexport
 source .env
 set +o allexport
 ```
 
-todo: 
-doc authentication design
+## Server (main web application)
 
-Required environment (secrets & config):
+The server reads environment variables using `viper`. The following variables are required for the server to start:
+
+Required:
 
 ```bash
-FIREBASE_CREDENTIALS_BASE64=        # Firebase admin SDK service account (base64 JSON)
-CSRF_SECRET=                       # Random 32+ bytes base64
-FIREBASE_INSENSITIVE_API_KEY=      # Firebase Web API key (frontend)
-FIREBASE_AUTH_DOMAIN=              # Firebase auth domain
-GCP_PROJECT_ID=                    # GCP project hosting the storage bucket
-GCS_BUCKET=                        # Name of the GCS bucket with blog posts
-GCS_CREDENTIALS_BASE64=            # Service account JSON (base64) used for GCS access from Hetzner
+SESSION_SECRET=                   # Required. Random secret for session signing.
+CSRF_SECRET=                      # Required. Random secret used for CSRF token generation.
+FIREBASE_CREDENTIALS_BASE64=      # Required. Firebase Admin SDK service account JSON, base64-encoded.
+GCS_BUCKET=                       # Required. Name of the Google Cloud Storage bucket containing blog posts and assets.
+GCS_CREDENTIALS_BASE64=           # Required. Service account JSON (base64) used for GCS access when not using Workload Identity.
 ```
 
-Running outside GCP (e.g. Hetzner) means no Workload Identity / OIDC is available. The application therefore authenticates to Google Cloud Storage using a service account JSON key supplied via `GCS_CREDENTIALS_BASE64`. Provide the raw JSON key, base64-encoded. Do NOT commit the decoded key.
+Optional / additional configuration (server will start without these but they affect runtime behavior):
+
+```bash
+FIREBASE_INSENSITIVE_API_KEY=     # Optional. Firebase Web API key used by the frontend (note: variable name in code is FIREBASE_INSENSITIVE_API_KEY).
+FIREBASE_AUTH_DOMAIN=             # Optional. Firebase Auth domain (e.g. "example.firebaseapp.com").
+GCP_PROJECT_NAME=                 # Optional informational/project name used by the server (config key: GCP_PROJECT_NAME).
+ORIGIN=                           # Optional. Origin used for CORS or security policy.
+ENVIRONMENT=                      # Optional. Defaults to "development". Example: production, staging, dev.
+LOCAL_DEV=                         # Optional. Boolean flag for local dev behavior (default false).
+```
+
+Notes:
+- `FIREBASE_CREDENTIALS_BASE64` and `GCS_CREDENTIALS_BASE64` must contain the raw JSON credential file encoded using base64 (do not commit the decoded JSON).
+- The code expects the API key variable to be named `FIREBASE_INSENSITIVE_API_KEY` (this is the name used in `config/config.go`).
+- The server requires `SESSION_SECRET` and `CSRF_SECRET` (these were missing from the earlier README).
+
+## Utility: set_firebase_claims (cmd/set_firebase_claims)
+
+This small CLI/utility has its own configuration separate from the server. It is used to impersonate a service account and set Firebase custom claims. Its required environment variables are:
+
+```bash
+FIREBASE_IMPERSONATE_SERVICE_ACCOUNT=  # Required. The email of the service account to impersonate (caller must have iam.serviceAccountTokenCreator).
+GCP_PROJECT_ID=                         # Required. The GCP/Firebase project ID used by the utility.
+```
+
+Note: The utility uses `GCP_PROJECT_ID` whereas the main server uses `GCP_PROJECT_NAME` (if provided). Keep these distinct.
+
+## Running outside GCP
+
+When running the server outside GCP (for example on Hetzner), Workload Identity / OIDC will not be available. The application therefore authenticates to Google Cloud Storage using the service account JSON supplied via `GCS_CREDENTIALS_BASE64`. Provide the raw JSON key base64-encoded.
+
+## Example `.env` snippet
+
+```bash
+SESSION_SECRET="$(openssl rand -base64 32)"
+CSRF_SECRET="$(openssl rand -base64 32)"
+FIREBASE_CREDENTIALS_BASE64="<base64-encoded-json>"
+GCS_CREDENTIALS_BASE64="<base64-encoded-json>"
+GCS_BUCKET="my-gcs-bucket"
+FIREBASE_INSENSITIVE_API_KEY="your-web-api-key"
+FIREBASE_AUTH_DOMAIN="example.firebaseapp.com"
+GCP_PROJECT_NAME="my-gcp-project-name"
+ENVIRONMENT=production
+LOCAL_DEV=false
+```
+
+## Quick verification
+
+After exporting your environment, run the server (for example `go run .` from the repository root) and it will fail fast with a clear error if any required config is missing. The error lists the missing variables.
+
+If you intend to run the `set_firebase_claims` utility, ensure the `FIREBASE_IMPERSONATE_SERVICE_ACCOUNT` and `GCP_PROJECT_ID` variables are set in your environment.
+
+---
+If you'd like, I can add a short `example.env.example` file to the repository with the above keys commented out, or a small script to encode JSON files to base64 and write them into `.env` for safer local dev.
