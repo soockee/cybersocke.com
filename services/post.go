@@ -18,12 +18,12 @@ func NewPostService(store storage.Storage, authService *AuthService) *PostServic
 	}
 }
 
-func (s *PostService) GetPost(slug string, ctx context.Context) ([]byte, error) {
+func (s *PostService) GetPost(slug string, ctx context.Context) (*storage.Post, error) {
 	post, err := s.store.GetPost(slug, ctx)
 	if err != nil {
 		return nil, err
 	}
-	return post.Content, nil
+	return post, nil
 }
 
 func (s *PostService) GetPosts(ctx context.Context) (map[string]*storage.Post, error) {
@@ -34,6 +34,6 @@ func (s *PostService) SearchPost(slug string, ctx context.Context) []string {
 	return []string{}
 }
 
-func (s *PostService) CreatePost(data []byte, ctx context.Context) error {
-	return s.store.CreatePost(data, ctx)
+func (s *PostService) CreatePost(data []byte, originalFilename string, ctx context.Context) error {
+	return s.store.CreatePost(data, originalFilename, ctx)
 }

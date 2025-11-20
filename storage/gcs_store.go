@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -76,27 +77,38 @@ func NewGCSStore(ctx context.Context, logger *slog.Logger, bucketName string, cr
 	return store, nil
 }
 
-// GetPost returns a Post pointer from cache or fetches & parses on miss
+// GetPost retrieves a single post by its filename (slug including .md, without the posts/ prefix)
 func (s *GCSStore) GetPost(slug string, ctx context.Context) (*Post, error) {
+	// Expect slug to include .md per spec
+	if !strings.HasSuffix(slug, ".md") {
+		slug = slug + ".md"
+	}
 	var raw []byte
 	if data, err := s.cache.Get(slug); err == nil {
 		s.logger.Info("Cache hit for post", slog.String("slug", slug))
 		raw = data
 	} else {
+		objName := "posts/" + slug
 		var err2 error
-		raw, err2 = s.readWithExtension(ctx, slug, ".md")
+		raw, err2 = s.readObject(ctx, objName)
 		if err2 != nil {
 			return nil, err2
 		}
 		s.cache.Set(slug, raw)
 	}
-	return parsePost(raw)
+	postPtr, err := parsePost(raw)
+	if err != nil {
+		return nil, err
+	}
+	postPtr.Meta.Slug = slug
+	return postPtr, nil
 }
 
 // GetPosts returns all posts as pointers parsed from cache or GCS
 func (s *GCSStore) GetPosts(ctx context.Context) (map[string]*Post, error) {
 	result := make(map[string]*Post)
-	it := s.client.Bucket(s.bucketName).Objects(ctx, nil)
+	q := &storage.Query{Prefix: "posts/"}
+	it := s.client.Bucket(s.bucketName).Objects(ctx, q)
 	for {
 		attrs, err := it.Next()
 		if err == iterator.Done {
@@ -105,25 +117,29 @@ func (s *GCSStore) GetPosts(ctx context.Context) (map[string]*Post, error) {
 		if err != nil {
 			return nil, fmt.Errorf("listing objects: %w", err)
 		}
-		slug := strings.TrimSuffix(attrs.Name, ".md")
-
+		// Skip non markdown files
+		if !strings.HasSuffix(attrs.Name, ".md") {
+			continue
+		}
+		// Derive slug (filename with extension) by trimming prefix
+		filename := strings.TrimPrefix(attrs.Name, "posts/")
 		var raw []byte
-		if data, err := s.cache.Get(slug); err == nil {
-			s.logger.Info("Cache hit for post", slog.String("slug", slug))
+		if data, err := s.cache.Get(filename); err == nil {
+			s.logger.Info("Cache hit for post", slog.String("slug", filename))
 			raw = data
 		} else {
-			raw, err = s.readWithExtension(ctx, slug, ".md")
+			raw, err = s.readObject(ctx, attrs.Name)
 			if err != nil {
 				return nil, err
 			}
-			s.cache.Set(slug, raw)
+			s.cache.Set(filename, raw)
 		}
-
 		postPtr, err := parsePost(raw)
 		if err != nil {
 			return nil, err
 		}
-		result[attrs.Name] = postPtr
+		postPtr.Meta.Slug = filename
+		result[filename] = postPtr
 	}
 	return result, nil
 }
@@ -136,22 +152,25 @@ func (s *GCSStore) GetAssets() http.Handler {
 	return nil
 }
 
-func (s *GCSStore) CreatePost(content []byte, ctx context.Context) error {
+func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx context.Context) error {
 	// Require authenticated Firebase user (middleware should have injected token)
 	firebaseTok, ok := ctx.Value(session.IdTokenKey).(*firebaseauth.Token)
 	if !ok || firebaseTok == nil {
 		return fmt.Errorf("unauthorized: firebase token missing")
 	}
 
+	// Derive slug from original filename (ignore any frontmatter slug)
+	derivedSlug := sanitizeFilename(originalFilename)
 	postMeta := PostMeta{}
 	if _, err := frontmatter.Parse(strings.NewReader(string(content)), &postMeta); err != nil {
 		return err
 	}
+	postMeta.Slug = derivedSlug
 	if err := postMeta.Validate(); err != nil {
 		return err
 	}
 
-	obj := s.client.Bucket(s.bucketName).Object(postMeta.Slug + ".md").NewWriter(ctx)
+	obj := s.client.Bucket(s.bucketName).Object("posts/" + postMeta.Slug).NewWriter(ctx)
 	obj.ContentType = "text/markdown"
 	obj.Metadata = map[string]string{"uploaded_by": firebaseTok.UID}
 
@@ -169,7 +188,8 @@ func (s *GCSStore) CreatePost(content []byte, ctx context.Context) error {
 
 // preloadCache lists all objects in the bucket and stores their content in cache
 func (s *GCSStore) preloadCache(ctx context.Context) error {
-	it := s.client.Bucket(s.bucketName).Objects(ctx, nil)
+	q := &storage.Query{Prefix: "posts/"}
+	it := s.client.Bucket(s.bucketName).Objects(ctx, q)
 	for {
 		attrs, err := it.Next()
 		if err == iterator.Done {
@@ -178,7 +198,10 @@ func (s *GCSStore) preloadCache(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("listing objects: %w", err)
 		}
-
+		if !strings.HasSuffix(attrs.Name, ".md") {
+			continue
+		}
+		filename := strings.TrimPrefix(attrs.Name, "posts/")
 		obj := s.client.Bucket(s.bucketName).Object(attrs.Name)
 		rc, err := obj.NewReader(ctx)
 		if err != nil {
@@ -189,9 +212,7 @@ func (s *GCSStore) preloadCache(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("reading data %s: %w", attrs.Name, err)
 		}
-
-		// Store raw content under key = object name
-		if err := s.cache.Set(attrs.Name, data); err != nil {
+		if err := s.cache.Set(filename, data); err != nil {
 			return fmt.Errorf("caching content %s: %w", attrs.Name, err)
 		}
 	}
@@ -229,4 +250,37 @@ func parsePost(raw []byte) (*Post, error) {
 		return nil, fmt.Errorf("parsing frontmatter: %w", err)
 	}
 	return &Post{Meta: meta, Content: body}, nil
+}
+
+// sanitizeFilename converts an arbitrary filename to a lowercase kebab-case slug with .md extension.
+func sanitizeFilename(name string) string {
+	name = strings.ToLower(name)
+	// Remove any path components
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	// Ensure .md extension
+	if !strings.HasSuffix(name, ".md") {
+		name = name + ".md"
+	}
+	base := name
+	// Remove extension for transformation
+	withoutExt := strings.TrimSuffix(base, ".md")
+	replacer := strings.NewReplacer(" ", "-", "_", "-")
+	withoutExt = replacer.Replace(withoutExt)
+	// Remove invalid characters
+	valid := make([]rune, 0, len(withoutExt))
+	for _, r := range withoutExt {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			valid = append(valid, r)
+		}
+	}
+	clean := string(valid)
+	// Collapse multiple hyphens
+	clean = regexp.MustCompile(`-+`).ReplaceAllString(clean, "-")
+	clean = strings.Trim(clean, "-")
+	if clean == "" {
+		clean = "post"
+	}
+	return clean + ".md"
 }

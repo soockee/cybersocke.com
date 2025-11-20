@@ -90,7 +90,7 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 
 	rootRouter.Use(
 		middleware.WithLogging(s.logger),
-		// middleware.WithDebugContext(), // required for dev
+		middleware.WithDebugContext(), // required for dev
 		middleware.WithCORS(),
 		middleware.WithSession(s.sessionStore),
 	)

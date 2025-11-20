@@ -9,20 +9,29 @@ import (
 )
 
 type Storage interface {
-	GetPost(id string, ctx context.Context) (*Post, error)
+	GetPost(slug string, ctx context.Context) (*Post, error)
 	GetPosts(ctx context.Context) (map[string]*Post, error)
 	GetAbout() []byte
 	GetAssets() http.Handler
 
-	CreatePost(data []byte, ctx context.Context) error
+	CreatePost(data []byte, originalFilename string, ctx context.Context) error
 }
 
 type PostMeta struct {
-	Name        string    `yaml:"name"`
-	Slug        string    `yaml:"slug"`
-	Tags        []string  `yaml:"tags"`
-	Date        time.Time `yaml:"date"`
-	Description string    `yaml:"description"`
+	Name            string    `yaml:"name"`
+	Slug            string    `yaml:"slug"` // derived from filename; frontmatter value ignored on upload
+	Tags            []string  `yaml:"tags"`
+	Aliases         []string  `yaml:"aliases"`
+	Lead            string    `yaml:"lead"` // short summary (can substitute description)
+	Visual          string    `yaml:"visual"`
+	Created         any       `yaml:"created"`  // may be scalar string or map placeholder
+	Modified        any       `yaml:"modified"` // may be scalar string or map placeholder
+	TemplateType    string    `yaml:"template_type"`
+	TemplateVersion string    `yaml:"template_version"`
+	License         string    `yaml:"license"`
+	UpdatedRaw      string    `yaml:"updated"`
+	Date            time.Time `yaml:"date"` // legacy field; falls back to updated/created if absent
+	Description     string    `yaml:"description"`
 }
 
 type Post struct {

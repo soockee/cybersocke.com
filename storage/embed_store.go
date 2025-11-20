@@ -108,6 +108,8 @@ func (s *EmbedStore) GetAssets() http.Handler {
 	return s.fs
 }
 
-func (s *EmbedStore) CreatePost(post []byte, ctx context.Context) error {
-	return errors.New("method not supported for embed store")
+// CreatePost implements the Storage interface but is not supported for the embedded store.
+// originalFilename is ignored. Returns an error to signal this backend is read-only.
+func (s *EmbedStore) CreatePost(_ []byte, _ string, _ context.Context) error {
+	return errors.New("create post not supported for embed store (read-only)")
 }
