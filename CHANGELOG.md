@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.2](https://github.com/soockee/cybersocke.com/compare/v1.9.1...v1.9.2) (2025-11-20)
+
+
+### Bug Fixes
+
+* post display ([21a30dc](https://github.com/soockee/cybersocke.com/commit/21a30dc2909146f0d38555a9ad19663fb22e4aad))
+
 ## [1.9.1](https://github.com/soockee/cybersocke.com/compare/v1.9.0...v1.9.1) (2025-11-20)
 
 
