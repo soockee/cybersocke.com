@@ -12,6 +12,8 @@ import (
 type Storage interface {
 	GetPost(slug string, ctx context.Context) (*Post, error)
 	GetPosts(ctx context.Context) (map[string]*Post, error)
+	GetPostsByTags(ctx context.Context, tags []string, matchAll bool) ([]*Post, error)
+	GetRelatedPosts(ctx context.Context, slug string, limit int) ([]*Post, error)
 	GetAbout() []byte
 	GetAssets() http.Handler
 

@@ -2,35 +2,62 @@ package components
 
 import (
 	"bytes"
-	"time"
 	"github.com/soockee/cybersocke.com/components/styles"
+	"github.com/soockee/cybersocke.com/storage"
 	"strings"
+	"time"
 )
 
 type PostViewProps struct {
+	// related posts shared count removed for simplicity.
 	Content bytes.Buffer
+	Title   string
+	Slug    string
+	Tags    []string
+	Related []*storage.Post
 }
 
 type PostCardProps struct {
-	Title string
+	Title       string
 	Description string
-	Slug string
-	Date time.Time
-	Tags []string
+	Slug        string
+	Date        time.Time
+	Tags        []string
 }
 
 templ Post(props PostViewProps) {
 	@layout("Post", []NavItem{NewNavItem("Home", "/")}) {
-		@templ.Raw(props.Content.String())
+		<article class="post-full">
+			@templ.Raw(props.Content.String())
+			<div class="post-tags">
+				<strong>Tags:</strong>
+				for i, t := range props.Tags {
+					<a href={ templ.URL("/?tags=" + t) } class="tag">{ t }</a>
+					if i < len(props.Tags)-1 {
+						<span>, </span>
+					}
+				}
+			</div>
+			if len(props.Related) > 0 {
+				<section class="related-posts">
+					<h2>Related Posts</h2>
+					<ul>
+						for _, rp := range props.Related {
+							<li><a href={ templ.URL("/posts/" + rp.Meta.Slug) }>{ rp.Meta.Name }</a></li>
+						}
+					</ul>
+				</section>
+			}
+		</article>
 	}
 }
 
+// contains helper for tag arrays (simple linear search)
 templ PostCardCSS() {
-  @styles.PostCardStylesHandle.Once() {
-    @styles.PostCardStyles
-  }
+	@styles.PostCardStylesHandle.Once() {
+		@styles.PostCardStyles
+	}
 }
-
 
 templ PostCard(props PostCardProps) {
 	@PostCardCSS()
@@ -43,7 +70,7 @@ templ PostCard(props PostCardProps) {
 				<p>{ props.Description }</p>
 				<div class="postcard_footer">
 					<p class="p_date">
-					{ props.Date.Format("January 2, 2006") }
+						{ props.Date.Format("January 2, 2006") }
 					</p>
 					<span>
 						{ strings.Join(props.Tags, ", ") }

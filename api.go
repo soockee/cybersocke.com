@@ -86,7 +86,11 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 		os.Exit(1)
 	}
 	postService := services.NewPostService(s.gcsStore, authService)
+	tagService := services.NewTagService()
 	aboutService := services.NewAboutService(s.embedStore)
+
+	// Attempt concrete GCS store assertion for graph features
+	gcsConcrete, _ := s.gcsStore.(*storage.GCSStore)
 
 	rootRouter.Use(
 		middleware.WithLogging(s.logger),
@@ -103,13 +107,18 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 	// Public GETs
 	rootRouter.HandleFunc("/about", makeHTTPHandleFunc(handlers.NewAboutHandler(aboutService, s.logger).ServeHTTP))
 	rootRouter.HandleFunc("/posts/{id}", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP)).Methods("GET")
+	if gcsConcrete != nil {
+		graphService := services.NewGraphService(gcsConcrete, tagService)
+		rootRouter.HandleFunc("/graph", makeHTTPHandleFunc(handlers.NewGraphHandler(s.logger, graphService).ServeHTTP)).Methods("GET")
+		rootRouter.HandleFunc("/graph.json", makeHTTPHandleFunc(handlers.NewGraphHandler(s.logger, graphService).ServeHTTP)).Methods("GET")
+	}
 
 	// Subrouter for CSRF-protected routes (e.g., writes from authenticated users)
 	protected := rootRouter.PathPrefix("/").Subrouter()
 	protected.Use(
 		middleware.WithCSRF(s.cfg.CSRFSecret, !s.cfg.LocalDev),
 	)
-	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, s.logger).ServeHTTP))
+	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, tagService, s.logger).ServeHTTP))
 
 	authenticated := protected.PathPrefix("/").Subrouter()
 	authenticated.Use(

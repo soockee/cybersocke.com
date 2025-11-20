@@ -78,3 +78,16 @@ After exporting your environment, run the server (for example `go run .` from th
 
 If you intend to run the `set_firebase_claims` utility, ensure the `FIREBASE_IMPERSONATE_SERVICE_ACCOUNT` and `GCP_PROJECT_ID` variables are set in your environment.
  
+## Tag-Based Navigation & Content Graph
+
+The storage layer builds an in-memory reverse index of tags to posts and exposes higher-level navigation helpers. Each post's frontmatter `tags` implements a lightweight architecture using families (`type/`, `source/`, `theme/`, etc.).
+
+### Validation
+
+`CreatePost` now validates tag families & cardinalities (MVP subset):
+* `type/*`: 1–2 required
+* `theme/*`: 1–5 required
+* `source/*`: ≤1
+* `structure/*`: ≤1
+
+Unknown families or malformed values (`family/value` required) are rejected.

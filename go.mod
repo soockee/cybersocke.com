@@ -9,7 +9,6 @@ require (
 	firebase.google.com/go/v4 v4.16.0
 	github.com/AccentDesign/gcss v0.1.2
 	github.com/a-h/templ v0.3.898
-	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/gorilla/csrf v1.7.3
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/sessions v1.4.0

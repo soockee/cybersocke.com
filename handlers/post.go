@@ -45,7 +45,9 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 	processed := stripDataview(post.Content)
 	md := services.RenderMD(processed)
-	h.View(w, r, components.PostViewProps{Content: md})
+	// Fetch related posts (limit 10)
+	related, _ := h.postService.GetRelatedPosts(post.Meta.Slug, 10, r.Context())
+	h.View(w, r, components.PostViewProps{Content: md, Title: post.Meta.Name, Slug: post.Meta.Slug, Tags: post.Meta.Tags, Related: related})
 	return nil
 }
 

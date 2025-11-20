@@ -9,19 +9,22 @@ import (
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
+	"github.com/soockee/cybersocke.com/storage"
 )
 
 type HomeHandler struct {
 	Log         *slog.Logger
 	postService *services.PostService
 	authService *services.AuthService
+	tagService  *services.TagService
 }
 
-func NewHomeHandler(post *services.PostService, auth *services.AuthService, log *slog.Logger) *HomeHandler {
+func NewHomeHandler(post *services.PostService, auth *services.AuthService, tags *services.TagService, log *slog.Logger) *HomeHandler {
 	return &HomeHandler{
 		Log:         log,
 		postService: post,
 		authService: auth,
+		tagService:  tags,
 	}
 }
 
@@ -37,10 +40,20 @@ func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	posts, err := h.postService.GetPosts(r.Context())
+	ctx := r.Context()
+	raw := r.URL.Query().Get("tags")
+	selected := h.tagService.ParseSelectedTags(raw)
+	var posts map[string]*storage.Post
+	var err error
+	if len(selected) > 0 {
+		posts, err = h.postService.GetPostsByTags(selected, false, ctx)
+	} else {
+		posts, err = h.postService.GetPosts(ctx)
+	}
 	if err != nil {
 		return err
 	}
+	summary := h.tagService.BuildSummary(posts, selected)
 
 	// default values
 	authed := false
@@ -55,9 +68,13 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	h.View(w, r, components.HomeViewProps{
-		Posts:     posts,
-		CSRFToken: csrfToken,
-		Authed:    authed,
+		Posts:        posts,
+		CSRFToken:    csrfToken,
+		Authed:       authed,
+		TagCounts:    summary.TagCounts,
+		TagOrder:     summary.TagOrder,
+		SelectedTags: selected,
+		Suggested:    summary.Suggested,
 	})
 	return nil
 }
