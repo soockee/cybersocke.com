@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
+	"github.com/soockee/cybersocke.com/config"
 	"github.com/soockee/cybersocke.com/handlers"
 	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
@@ -28,6 +29,7 @@ type ApiServer struct {
 	embedStore   storage.Storage
 	gcsStore     storage.Storage
 	sessionStore *sessions.CookieStore
+	cfg          *config.Config
 
 	domainName string
 	logger     *slog.Logger
@@ -35,18 +37,19 @@ type ApiServer struct {
 	ctx        context.Context
 }
 
-func NewApiServer(embed storage.Storage, gcs storage.Storage, logger *slog.Logger, assets embed.FS) *ApiServer {
-	store := sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
+func NewApiServer(embed storage.Storage, gcs storage.Storage, logger *slog.Logger, assets embed.FS, cfg *config.Config) *ApiServer {
+	store := sessions.NewCookieStore([]byte(cfg.SessionSecret))
 	store.Options = &sessions.Options{
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // false for local dev
+		Secure:   !cfg.LocalDev,
 		MaxAge:   300,
 	}
 	server := &ApiServer{
 		embedStore:   embed,
 		gcsStore:     gcs,
 		sessionStore: store,
+		cfg:          cfg,
 
 		domainName: "cybersocke.com",
 		logger:     logger,
@@ -77,7 +80,7 @@ func (s *ApiServer) Run() {
 func (s *ApiServer) InitRoutes() *mux.Router {
 	rootRouter := mux.NewRouter()
 
-	authService, err := services.NewAuthService(s.ctx)
+	authService, err := services.NewAuthService(s.ctx, s.cfg.FirebaseCredentialsBase64, s.cfg.GCPProjectName)
 	if err != nil {
 		s.logger.Error("Failed to initialize AuthService", slog.Any("err", err))
 		os.Exit(1)
@@ -87,7 +90,7 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 
 	rootRouter.Use(
 		middleware.WithLogging(s.logger),
-		// middleware.WithDebugContext(),
+		// middleware.WithDebugContext(), // required for dev
 		middleware.WithCORS(),
 		middleware.WithSession(s.sessionStore),
 	)
@@ -104,7 +107,7 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 	// Subrouter for CSRF-protected routes (e.g., writes from authenticated users)
 	protected := rootRouter.PathPrefix("/").Subrouter()
 	protected.Use(
-		middleware.WithCSRF(),
+		middleware.WithCSRF(s.cfg.CSRFSecret, !s.cfg.LocalDev),
 	)
 	protected.HandleFunc("/", makeHTTPHandleFunc(handlers.NewHomeHandler(postService, authService, s.logger).ServeHTTP))
 
@@ -113,7 +116,10 @@ func (s *ApiServer) InitRoutes() *mux.Router {
 		middleware.WithAuthentication(authService, s.sessionStore),
 	)
 	authenticated.HandleFunc("/error", makeHTTPHandleFunc(handlers.NewErrorHandler(s.logger).ServeHTTP))
-	authenticated.HandleFunc("/posts", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP))
+	// Writer-protected POST route for creating posts
+	writer := authenticated.PathPrefix("/").Subrouter()
+	writer.Use(middleware.WithRole("user"))
+	writer.HandleFunc("/posts", makeHTTPHandleFunc(handlers.NewPostHandler(postService, s.logger).ServeHTTP)).Methods(http.MethodPost)
 
 	return rootRouter
 }

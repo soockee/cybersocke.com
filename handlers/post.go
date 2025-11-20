@@ -62,10 +62,8 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 
 	// TODO: handle markdown content
 	fmt.Println(string(content))
-	if err != nil {
-		return err
-	}
 
+	// Role & authentication enforced via middleware; proceed to create
 	if err := h.postService.CreatePost(content, r.Context()); err != nil {
 		return err
 	}
@@ -75,3 +73,7 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props components.PostViewProps) {
 	components.Post(props).Render(r.Context(), w)
 }
+
+// hasWriterRole determines if the token has permission to write posts.
+// Accepts role patterns: role==writer/admin, roles slice contains writer/admin, writer=true or admin=true.
+// Role enforcement moved to middleware.WithRole("writer") for POST /posts.

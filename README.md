@@ -10,18 +10,16 @@ set +o allexport
 todo: 
 doc authentication design
 
-sensitive data:
+Required environment (secrets & config):
 
 ```bash
-FIREBASE_CREDENTIALS_BASE64=
-CSRF_SECRET=
-FIREBASE_INSENSITIVE_API_KEY=
-FIREBASE_AUTH_DOMAIN=
-GCP_PROJECT_NAME=
-GCP_PROJECT_ID=
-GCP_WIF_POOL_ID=
-GCP_WIF_POOL_PROVIDER_ID=
-IMPERSONATE_STORAGE_SERVICE_ACCOUNT=
-GCS_BUCKET=
-GCS_STORAGE_RO_SERVICE_ACCOUNT_KEY_BASE64=
+FIREBASE_CREDENTIALS_BASE64=        # Firebase admin SDK service account (base64 JSON)
+CSRF_SECRET=                       # Random 32+ bytes base64
+FIREBASE_INSENSITIVE_API_KEY=      # Firebase Web API key (frontend)
+FIREBASE_AUTH_DOMAIN=              # Firebase auth domain
+GCP_PROJECT_ID=                    # GCP project hosting the storage bucket
+GCS_BUCKET=                        # Name of the GCS bucket with blog posts
+GCS_CREDENTIALS_BASE64=            # Service account JSON (base64) used for GCS access from Hetzner
 ```
+
+Running outside GCP (e.g. Hetzner) means no Workload Identity / OIDC is available. The application therefore authenticates to Google Cloud Storage using a service account JSON key supplied via `GCS_CREDENTIALS_BASE64`. Provide the raw JSON key, base64-encoded. Do NOT commit the decoded key.

@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/base64"
-	"os"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
@@ -15,14 +14,14 @@ type AuthService struct {
 	Client *auth.Client
 }
 
-func NewAuthService(ctx context.Context) (*AuthService, error) {
-	encoded := os.Getenv("FIREBASE_CREDENTIALS_BASE64")
-	decoded, err := base64.StdEncoding.DecodeString(encoded)
+func NewAuthService(ctx context.Context, firebaseCredsBase64 string, projectID string) (*AuthService, error) {
+	decoded, err := base64.StdEncoding.DecodeString(firebaseCredsBase64)
 	if err != nil {
 		return nil, err
 	}
-	config := &firebase.Config{
-		ProjectID: "dz-cybersocke01",
+	config := &firebase.Config{}
+	if projectID != "" {
+		config.ProjectID = projectID
 	}
 	app, err := firebase.NewApp(ctx, config, option.WithCredentialsJSON(decoded))
 	if err != nil {

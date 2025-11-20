@@ -46,8 +46,10 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	authed := false
 	csrfToken := csrf.Token(r)
 
-	if token, ok := middleware.GetSession(r).Values["id_token"].(string); ok {
-		if _, err := h.authService.Verify(token, r.Context()); err == nil {
+	session := middleware.GetSession(r)
+	if token, ok := session.Values["id_token"].(string); ok {
+		if token, err := h.authService.Verify(token, r.Context()); err == nil {
+			slog.Info("", slog.Any("claims", token.Claims))
 			authed = true
 		}
 	}
