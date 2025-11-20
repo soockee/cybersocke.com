@@ -40,7 +40,7 @@ LOCAL_DEV=                         # Optional. Boolean flag for local dev behavi
 Notes:
 - `FIREBASE_CREDENTIALS_BASE64` and `GCS_CREDENTIALS_BASE64` must contain the raw JSON credential file encoded using base64 (do not commit the decoded JSON).
 - The code expects the API key variable to be named `FIREBASE_INSENSITIVE_API_KEY` (this is the name used in `config/config.go`).
-- The server requires `SESSION_SECRET` and `CSRF_SECRET` (these were missing from the earlier README).
+- The server requires `SESSION_SECRET` and `CSRF_SECRET`.
 
 ## Utility: set_firebase_claims (cmd/set_firebase_claims)
 
@@ -77,6 +77,4 @@ LOCAL_DEV=false
 After exporting your environment, run the server (for example `go run .` from the repository root) and it will fail fast with a clear error if any required config is missing. The error lists the missing variables.
 
 If you intend to run the `set_firebase_claims` utility, ensure the `FIREBASE_IMPERSONATE_SERVICE_ACCOUNT` and `GCP_PROJECT_ID` variables are set in your environment.
-
----
-If you'd like, I can add a short `example.env.example` file to the repository with the above keys commented out, or a small script to encode JSON files to base64 and write them into `.env` for safer local dev.
+ 
