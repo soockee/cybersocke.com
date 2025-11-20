@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/soockee/cybersocke.com/compare/v1.8.3...v1.9.0) (2025-11-20)
+
+
+### Features
+
+* add role based access control ([d43f0e8](https://github.com/soockee/cybersocke.com/commit/d43f0e8ef49cdfb085ff5e9c6d838b1bbc2b95d1))
+
 ## [1.8.3](https://github.com/soockee/cybersocke.com/compare/v1.8.2...v1.8.3) (2025-06-11)
 
 
