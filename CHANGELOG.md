@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.1](https://github.com/soockee/cybersocke.com/compare/v1.9.0...v1.9.1) (2025-11-20)
+
+
+### Bug Fixes
+
+* check for revocation ([6971999](https://github.com/soockee/cybersocke.com/commit/69719993750eb3da128461a42e6f22ccbca0eac6))
+* update frontmatter for obsidian content ([49f0542](https://github.com/soockee/cybersocke.com/commit/49f054200c48111a3baa6364f07237769ccf937a))
+
 ## [1.9.0](https://github.com/soockee/cybersocke.com/compare/v1.8.3...v1.9.0) (2025-11-20)
 
 
