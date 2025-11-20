@@ -40,7 +40,7 @@ func hasRole(tok *firebaseauth.Token, want string) bool {
 	claims := tok.Claims
 	// Single role string
 	if role, ok := claims["role"].(string); ok {
-		if role == want || (want == "writer" && role == "admin") { // admin supersets writer
+		if role == want { // admin supersets writer
 			return true
 		}
 	}
@@ -48,7 +48,7 @@ func hasRole(tok *firebaseauth.Token, want string) bool {
 	if raw, ok := claims["roles"].([]any); ok {
 		for _, v := range raw {
 			if s, ok2 := v.(string); ok2 {
-				if s == want || (want == "writer" && s == "admin") {
+				if s == want {
 					return true
 				}
 			}
@@ -57,11 +57,6 @@ func hasRole(tok *firebaseauth.Token, want string) bool {
 	// Boolean style claims
 	if b, ok := claims[want].(bool); ok && b {
 		return true
-	}
-	if want == "writer" { // admin implies writer
-		if b, ok := claims["admin"].(bool); ok && b {
-			return true
-		}
 	}
 	return false
 }

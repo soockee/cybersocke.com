@@ -39,5 +39,5 @@ func NewAuthService(ctx context.Context, firebaseCredsBase64 string, projectID s
 }
 
 func (s *AuthService) Verify(idToken string, ctx context.Context) (*auth.Token, error) {
-	return s.Client.VerifyIDToken(ctx, idToken)
+	return s.Client.VerifyIDTokenAndCheckRevoked(ctx, idToken)
 }
