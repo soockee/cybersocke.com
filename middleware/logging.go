@@ -33,6 +33,14 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.wroteHeader = true
 }
 
+// Write captures implicit 200 responses where handlers write a body without calling WriteHeader.
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	return rw.ResponseWriter.Write(b)
+}
+
 func WithLogging(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +54,10 @@ func WithLogging(logger *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			wrapped := wrapResponseWriter(w)
 			next.ServeHTTP(wrapped, r)
+			// Fallback: if no header/body write occurred (status still zero), assume 200 for successful handlers.
+			if wrapped.status == 0 {
+				wrapped.status = http.StatusOK
+			}
 			status := wrapped.status
 			path := r.URL.EscapedPath()
 

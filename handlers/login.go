@@ -34,6 +34,8 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *LoginHandler) Get(w http.ResponseWriter, r *http.Request) error {
+	// Explicitly send status for clarity (even though logging middleware now captures implicit 200).
+	w.WriteHeader(http.StatusOK)
 	h.View(w, r, components.LoginViewProps{
 		FirebaseInsensitiveAPIKey: os.Getenv("FIREBASE_INSENSITIVE_API_KEY"),
 		FirebaseAuthDomain:        os.Getenv("FIREBASE_AUTH_DOMAIN"),
