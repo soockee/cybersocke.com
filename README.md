@@ -91,3 +91,24 @@ The storage layer builds an in-memory reverse index of tags to posts and exposes
 * `structure/*`: ≤1
 
 Unknown families or malformed values (`family/value` required) are rejected.
+## JSON API Separation
+
+All JSON responses are now served under the `/api` prefix to clearly distinguish them from HTML content pages.
+
+Current JSON endpoints:
+
+```
+GET /api/graph                 # Tag graph JSON (query: minSharedTags, includeTags, maxEdges)
+GET /api/posts/{id}/adjacency  # Neighboring posts sharing tags (query: includeTags, minShared, limit)
+```
+
+Legacy path `GET /posts/{id}/adjacency` has been removed from the public non-API router. Update any clients to use `/api/posts/{id}/adjacency`.
+
+Example usage:
+
+```bash
+curl http://localhost:8080/api/graph
+curl "http://localhost:8080/api/posts/some-post.md/adjacency?limit=12"
+```
+
+http://localhost:8080/posts/simon-stockhause.md

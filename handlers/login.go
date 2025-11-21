@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/soockee/cybersocke.com/internal/httpx"
 
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/services"
@@ -28,7 +29,7 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	case http.MethodGet:
 		return h.Get(w, r)
 	default:
-		return errors.New("method not allowed")
+		return httpx.ErrMethodNotAllowed
 	}
 }
 
@@ -41,7 +42,7 @@ func (h *LoginHandler) Get(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *LoginHandler) Post(w http.ResponseWriter, r *http.Request) error {
-	return errors.New("method not allowed")
+	return httpx.ErrMethodNotAllowed
 }
 
 func (h *LoginHandler) View(w http.ResponseWriter, r *http.Request, props components.LoginViewProps) {

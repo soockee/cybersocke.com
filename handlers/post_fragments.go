@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
@@ -23,7 +25,7 @@ func NewPostFragmentsHandler(post *services.PostService, log *slog.Logger) *Post
 
 func (h *PostFragmentsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet {
-		return errors.New("method not allowed")
+		return httpx.ErrMethodNotAllowed
 	}
 	return h.GetFragments(w, r)
 }
@@ -34,7 +36,7 @@ func (h *PostFragmentsHandler) GetFragments(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	tag := r.URL.Query().Get("tag")
 	if tag == "" {
-		return errors.New("missing tag")
+		return httpx.BadRequest("missing tag", nil)
 	}
 	limit := 5
 	if lstr := r.URL.Query().Get("limit"); lstr != "" {
@@ -44,7 +46,7 @@ func (h *PostFragmentsHandler) GetFragments(w http.ResponseWriter, r *http.Reque
 	}
 	posts, err := h.postService.GetPostsByTag(tag, limit, ctx)
 	if err != nil {
-		return err
+		return httpx.Classify(err)
 	}
 	if len(posts) == 0 {
 		w.WriteHeader(http.StatusNotFound)
@@ -55,7 +57,34 @@ func (h *PostFragmentsHandler) GetFragments(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
 	for _, p := range posts {
-		components.PostFragment(components.PostFragmentProps{Post: p, Related: []*storage.Post{}}).Render(ctx, w)
+		clean := services.StripDataview(p.Content)
+		md := services.RenderMD(clean)
+		// Build tag families (same logic as full post view)
+		families := map[string][]string{}
+		for _, t := range p.Meta.Tags {
+			parts := strings.SplitN(t, "/", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			families[parts[0]] = append(families[parts[0]], parts[1])
+		}
+		for k := range families {
+			sort.Strings(families[k])
+		}
+		props := components.PostViewProps{
+			Content:     md,
+			Title:       p.Meta.Name,
+			Slug:        p.Meta.Slug,
+			Tags:        p.Meta.Tags,
+			Related:     []*storage.Post{},
+			Lead:        p.Meta.Lead,
+			Created:     p.Meta.Created,
+			Updated:     p.Meta.Updated,
+			Published:   p.Meta.Published,
+			Aliases:     p.Meta.Aliases,
+			TagFamilies: families,
+		}
+		components.PostFragment(props).Render(ctx, w)
 	}
 	w.Write([]byte("</div>"))
 	return nil
