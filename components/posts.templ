@@ -2,39 +2,85 @@ package components
 
 import (
 	"bytes"
-	"time"
-	"github.com/soockee/cybersocke.com/components/styles"
+	"github.com/soockee/cybersocke.com/storage"
 	"strings"
+	"time"
 )
 
 type PostViewProps struct {
-	Content bytes.Buffer
+	// related posts shared count removed for simplicity.
+	Content     bytes.Buffer
+	Title       string
+	Slug        string
+	Tags        []string
+	Related     []*storage.Post
+	Lead        string
+	Created     time.Time
+	Updated     time.Time
+	Published   bool
+	Aliases     []string
+	TagFamilies map[string][]string
 }
 
 type PostCardProps struct {
-	Title string
+	Title       string
 	Description string
-	Slug string
-	Date time.Time
-	Tags []string
+	Slug        string
+	Date        time.Time
+	Tags        []string
 }
 
 templ Post(props PostViewProps) {
 	@layout("Post", []NavItem{NewNavItem("Home", "/")}) {
-		@templ.Raw(props.Content.String())
+		<article class="post-full" data-slug={ props.Slug }>
+			<div class="post-meta">
+				<h1>{ props.Title }</h1>
+				if props.Lead != "" {
+					<p class="post-lead">{ props.Lead }</p>
+				}
+				<dl class="post-frontmatter">
+					<dt>Created</dt>
+					<dd><time datetime={ props.Created.Format(time.RFC3339) }>{ props.Created.Format("2006-01-02") }</time></dd>
+					<dt>Updated</dt>
+					<dd><time datetime={ props.Updated.Format(time.RFC3339) }>{ props.Updated.Format("2006-01-02") }</time></dd>
+					if props.Published {
+						<dt>Published</dt>
+						<dd>Yes</dd>
+					} else {
+						<dt>Published</dt>
+						<dd>No</dd>
+					}
+					if len(props.Aliases) > 0 {
+						<dt>Aliases</dt>
+						<dd>{ strings.Join(props.Aliases, ", ") }</dd>
+					}
+				</dl>
+				<div class="tag-families">
+					for family, vals := range props.TagFamilies {
+						<div class="tag-family" data-family={ family }><strong>{ family }</strong>: { strings.Join(vals, ", ") }</div>
+					}
+				</div>
+			</div>
+			@templ.Raw(props.Content.String())
+			<div class="post-tags"><strong>All Tags:</strong>@TagInlineList(props.Tags, "/?tags=")
+</div>
+			if len(props.Related) > 0 {
+				<section class="related-posts">
+					<h2>Related Posts</h2>
+					<ul>
+						for _, rp := range props.Related {
+							<li><a href={ templ.URL("/posts/" + rp.Meta.Slug) }>{ rp.Meta.Name }</a></li>
+						}
+					</ul>
+				</section>
+			}
+		</article>
 	}
 }
 
-templ PostCardCSS() {
-  @styles.PostCardStylesHandle.Once() {
-    @styles.PostCardStyles
-  }
-}
-
-
+// contains helper for tag arrays (simple linear search)
 templ PostCard(props PostCardProps) {
-	@PostCardCSS()
-	<section class="postcard">
+	<section class="postcard" data-slug={ props.Slug } data-tags={ strings.Join(props.Tags, " ") }>
 		<a href={ templ.URL("/posts/" + props.Slug) }>
 			<aside>
 				<h2>
@@ -42,9 +88,7 @@ templ PostCard(props PostCardProps) {
 				</h2>
 				<p>{ props.Description }</p>
 				<div class="postcard_footer">
-					<p class="p_date">
-					{ props.Date.Format("January 2, 2006") }
-					</p>
+					<p class="p_date"><time datetime={ props.Date.Format("2006-01-02") }>{ props.Date.Format("January 2, 2006") }</time></p>
 					<span>
 						{ strings.Join(props.Tags, ", ") }
 					</span>

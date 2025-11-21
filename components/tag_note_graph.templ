@@ -1,0 +1,35 @@
+package components
+
+import (
+	"github.com/soockee/cybersocke.com/storage"
+	"strings"
+)
+
+type TagNoteGraphProps struct {
+	Posts     map[string]*storage.Post
+	TagCounts map[string]int
+	Authed    bool
+}
+
+// TagNoteGraph renders hidden data spans and Cytoscape container for bipartite graph.
+templ TagNoteGraph(p TagNoteGraphProps) {
+	@layout("Graph", GetNavItems(p.Authed)) {
+		<div class="tag-note-graph-wrapper">
+			<h1>Knowledge Graph</h1>
+			<div id="tag-note-cy" class="tag-note-cy" data-mode="tag-note" style="width:100%;height:600px" role="application" aria-label="Tag to note relationship graph"></div>
+			<div class="tag-note-data" style="display:none">
+				for tag, count := range p.TagCounts {
+					<span class="tag-node" data-tag={ tag } data-weight={ count }></span>
+				}
+				for _, post := range p.Posts {
+					<span class="note-node" data-slug={ post.Meta.Slug } data-name={ post.Meta.Name } data-tags={ strings.Join(post.Meta.Tags, " ") } data-weight={ len(post.Meta.Tags) }></span>
+				}
+			</div>
+			<script defer src="/assets/js/cytoscape/3.33.1-cytoscape.min.js"></script>
+			<script defer src="/assets/js/cytoscape/2.0.1-layout-base.js"></script>
+			<script defer src="/assets/js/cytoscape/2.2.0-cose-base.js"></script>
+			<script defer src="/assets/js/cytoscape/2.2.0-fcose.js"></script>
+			<script defer src="/assets/js/tag_note_graph.js"></script>
+		</div>
+	}
+}

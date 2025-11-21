@@ -12,6 +12,8 @@ import (
 type Storage interface {
 	GetPost(slug string, ctx context.Context) (*Post, error)
 	GetPosts(ctx context.Context) (map[string]*Post, error)
+	GetPostsByTags(ctx context.Context, tags []string, matchAll bool) ([]*Post, error)
+	GetRelatedPosts(ctx context.Context, slug string, limit int) ([]*Post, error)
 	GetAbout() []byte
 	GetAssets() http.Handler
 
@@ -19,20 +21,16 @@ type Storage interface {
 }
 
 type PostMeta struct {
-	Name            string    `yaml:"name"`
-	Slug            string    `yaml:"slug"` // derived from filename; frontmatter value ignored on upload
-	Tags            []string  `yaml:"tags"`
-	Aliases         []string  `yaml:"aliases"`
-	Lead            string    `yaml:"lead"` // short summary (can substitute description)
-	Visual          string    `yaml:"visual"`
-	Created         any       `yaml:"created"`  // may be scalar string or map placeholder
-	Modified        any       `yaml:"modified"` // may be scalar string or map placeholder
-	TemplateType    string    `yaml:"template_type"`
-	TemplateVersion string    `yaml:"template_version"`
-	License         string    `yaml:"license"`
-	UpdatedRaw      string    `yaml:"updated"`
-	Date            time.Time `yaml:"date"` // legacy field; falls back to updated/created if absent
-	Description     string    `yaml:"description"`
+	Name         string    `yaml:"name"`
+	Slug         string    `yaml:"slug"` // derived from filename; frontmatter value ignored on upload
+	Tags         []string  `yaml:"tags"`
+	Aliases      []string  `yaml:"aliases"`
+	Lead         string    `yaml:"lead"`      // short summary (can substitute description)
+	Created      any       `yaml:"created"`   // may be scalar string or map placeholder
+	UpdatedRaw   string    `yaml:"updated"`   // raw timestamp string from frontmatter (flexible formats)
+	Updated      time.Time `yaml:"-"`         // parsed canonical time (set during validation / parse)
+	PublishedRaw string    `yaml:"published"` // raw published value (string/bool); parsed in validation
+	Published    bool      `yaml:"-"`         // parsed boolean
 }
 
 type Post struct {
@@ -52,9 +50,9 @@ func SortPostMap(posts map[string]*Post) []*Post {
 func SortPostsByDate(posts []*Post) []*Post {
 	// Sort in descending order (newest first)
 	slices.SortFunc(posts, func(a, b *Post) int {
-		if a.Meta.Date.After(b.Meta.Date) {
+		if a.Meta.Updated.After(b.Meta.Updated) {
 			return -1 // a is newer, comes first
-		} else if a.Meta.Date.Before(b.Meta.Date) {
+		} else if a.Meta.Updated.Before(b.Meta.Updated) {
 			return 1 // b is newer, comes first
 		}
 		return 0 // Dates are equal

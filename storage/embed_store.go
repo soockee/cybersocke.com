@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"path"
+	"sort"
 	"strings"
 
 	"github.com/soockee/cybersocke.com/parser/frontmatter"
@@ -20,10 +22,12 @@ type EmbedStore struct {
 func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, error) {
 	posts := map[string]Post{}
 
-	files, err := assets.ReadDir(postDir)
-	if err != nil {
-		return nil, err
-	}
+	// files, err := assets.ReadDir(postDir)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// empty placeholder
+	files := []fs.DirEntry{}
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -44,11 +48,19 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 			if strings.TrimSpace(postMeta.Name) == "" {
 				postMeta.Name = DeriveDisplayName(postMeta.Slug)
 			}
-			// Derive date from updated field on read if zero
-			if postMeta.Date.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
-				if ts := parseTimestamp(postMeta.UpdatedRaw); !ts.IsZero() {
-					postMeta.Date = ts
-				}
+			// Parse flexible updated timestamp if provided.
+			if postMeta.Updated.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
+				postMeta.Updated = parseTimestamp(postMeta.UpdatedRaw)
+			}
+			// Parse flexible published boolean (string or bool) if provided.
+			rawPub := strings.ToLower(strings.TrimSpace(postMeta.PublishedRaw))
+			switch rawPub {
+			case "", "false", "no", "0", "off":
+				postMeta.Published = false
+			case "true", "yes", "1", "on":
+				postMeta.Published = true
+			default:
+				postMeta.Published = false // ignore invalid
 			}
 			posts[postMeta.Slug] = Post{Meta: postMeta, Content: content}
 		}
@@ -58,12 +70,23 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 	if err != nil {
 		return nil, err
 	}
-	fs := http.FileServer(http.FS(public))
+	baseFS := http.FileServer(http.FS(public))
+	// Wrap to enforce correct JS MIME type (some environments default to text/plain)
+	wrapped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		// normalize path extension
+		ext := strings.ToLower(path.Ext(p))
+		if ext == ".js" {
+			// Always set explicit JS MIME to avoid strict MIME rejection
+			w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+		}
+		baseFS.ServeHTTP(w, r)
+	})
 
 	return &EmbedStore{
 		assets: assets,
 		posts:  posts,
-		fs:     fs,
+		fs:     wrapped,
 	}, nil
 }
 
@@ -122,4 +145,109 @@ func (s *EmbedStore) GetAssets() http.Handler {
 // originalFilename is ignored. Returns an error to signal this backend is read-only.
 func (s *EmbedStore) CreatePost(_ []byte, _ string, _ context.Context) error {
 	return errors.New("create post not supported for embed store (read-only)")
+}
+
+// GetPostsByTags implements tag filtering for embedded posts.
+// If tags is empty returns error. matchAll controls intersection semantics.
+func (s *EmbedStore) GetPostsByTags(ctx context.Context, tags []string, matchAll bool) ([]*Post, error) {
+	if len(tags) == 0 {
+		return nil, errors.New("no tags provided")
+	}
+	// normalize & dedupe
+	uniq := []string{}
+	seen := map[string]struct{}{}
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		uniq = append(uniq, t)
+	}
+	result := []*Post{}
+	for _, p := range s.posts {
+		if matchAll {
+			matches := true
+			for _, t := range uniq {
+				if !hasTag(p.Meta.Tags, t) {
+					matches = false
+					break
+				}
+			}
+			if !matches {
+				continue
+			}
+		} else {
+			any := false
+			for _, t := range uniq {
+				if hasTag(p.Meta.Tags, t) {
+					any = true
+					break
+				}
+			}
+			if !any {
+				continue
+			}
+		}
+		// copy content to comply with interface expectations (avoid mutation)
+		copyContent := make([]byte, len(p.Content))
+		copy(copyContent, p.Content)
+		cp := &Post{Meta: p.Meta, Content: copyContent}
+		result = append(result, cp)
+	}
+	return SortPostsByDate(result), nil
+}
+
+// GetRelatedPosts returns posts sharing at least one tag with slug, ranked by shared count desc then date desc then slug asc.
+func (s *EmbedStore) GetRelatedPosts(ctx context.Context, slug string, limit int) ([]*Post, error) {
+	current, ok := s.posts[slug]
+	if !ok {
+		return nil, errors.New("post not found")
+	}
+	sharedCounts := map[string]int{}
+	for _, tag := range current.Meta.Tags {
+		for otherSlug, p := range s.posts {
+			if otherSlug == slug {
+				continue
+			}
+			if hasTag(p.Meta.Tags, tag) {
+				sharedCounts[otherSlug]++
+			}
+		}
+	}
+	related := []*Post{}
+	for otherSlug := range sharedCounts {
+		p := s.posts[otherSlug]
+		copyContent := make([]byte, len(p.Content))
+		copy(copyContent, p.Content)
+		related = append(related, &Post{Meta: p.Meta, Content: copyContent})
+	}
+	sort.Slice(related, func(i, j int) bool {
+		ci := sharedCounts[related[i].Meta.Slug]
+		cj := sharedCounts[related[j].Meta.Slug]
+		if ci != cj {
+			return ci > cj
+		}
+		if !related[i].Meta.Updated.Equal(related[j].Meta.Updated) {
+			return related[i].Meta.Updated.After(related[j].Meta.Updated)
+		}
+		return related[i].Meta.Slug < related[j].Meta.Slug
+	})
+	if limit > 0 && len(related) > limit {
+		related = related[:limit]
+	}
+	return related, nil
+}
+
+// hasTag checks membership
+func hasTag(tags []string, t string) bool {
+	for _, x := range tags {
+		if x == t {
+			return true
+		}
+	}
+	return false
 }

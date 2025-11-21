@@ -1,0 +1,19 @@
+package components
+
+// TagInlineList renders a horizontal inline list of tags.
+// If linkBase is non-empty, each tag becomes an anchor linking to linkBase+tag.
+// Separators are middle-dot characters for compact readability.
+templ TagInlineList(tags []string, linkBase string) {
+	<div class="tag-inline-list">
+		for i, t := range tags {
+			if linkBase != "" {
+				<a href={ templ.URL(linkBase + t) } class="tag">{ t }</a>
+			} else {
+				<span class="tag">{ t }</span>
+			}
+			if i < len(tags)-1 {
+				<span class="sep">·</span>
+			}
+		}
+	</div>
+}

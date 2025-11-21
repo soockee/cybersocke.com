@@ -40,10 +40,22 @@ async function handleFile(file) {
       },
       body: formData
     });
-    if (!response.ok) throw new Error("Upload failed");
-    // alert("Upload successful");
+    const raw = await response.text();
+    let slug = "";
+    let errMsg = "";
+    try {
+      const data = JSON.parse(raw);
+      slug = data.slug || "";
+      errMsg = data.error || "";
+    } catch (_) {
+      // Non-JSON response (ignore)
+    }
+    if (!response.ok) {
+      throw new Error(errMsg || "Upload failed");
+    }
+    alert(slug ? `Upload successful: ${slug}` : "Upload successful");
   } catch (err) {
     console.error(err);
-    // alert("Upload error");
+    alert(err.message || "Upload error");
   }
 }

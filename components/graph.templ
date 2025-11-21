@@ -1,0 +1,45 @@
+package components
+
+import (
+	"github.com/soockee/cybersocke.com/storage"
+	"strings"
+)
+
+type GraphViewProps struct {
+	Graph         *storage.TagGraph
+	MinSharedTags int
+	IncludeTags   []string
+	Authed        bool
+}
+
+templ Graph(props GraphViewProps) {
+	@layout("Graph", GetNavItems(props.Authed)) {
+		<div>
+			<h1>Content Graph</h1>
+			<p>Nodes: { len(props.Graph.Posts) } | Edges: { len(props.Graph.Edges) } | MinSharedTags: { props.MinSharedTags }</p>
+			if len(props.IncludeTags) > 0 {
+				<p>Included tags filter: { strings.Join(props.IncludeTags, ", ") }</p>
+			}
+			<div class="section">
+				<h2>Nodes</h2>
+				<ul>
+					for _, p := range props.Graph.Posts {
+						<li class="node">
+							<strong>{ p.Meta.Name }</strong> <code>{ p.Meta.Slug }</code>
+							<div class="tags">{ strings.Join(p.Meta.Tags, ", ") }</div>
+						</li>
+					}
+				</ul>
+			</div>
+			<div class="section">
+				<h2>Edges</h2>
+				<ul>
+					for _, e := range props.Graph.Edges {
+						<li class="edge">{ e.From } ⇄ { e.To } <span class="tags">({ e.Weight } shared: { strings.Join(e.SharedTags, ", ") })</span></li>
+					}
+				</ul>
+			</div>
+			<p>JSON view: <a href="/graph.json">/graph.json</a></p>
+		</div>
+	}
+}

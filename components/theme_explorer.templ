@@ -1,0 +1,22 @@
+package components
+
+import "strings"
+
+type ThemeExplorerProps struct {
+	Tags []string
+}
+
+templ ThemeExplorer(props ThemeExplorerProps) {
+	<div class="theme-explorer" role="navigation" aria-label="Theme explorer">
+		<h3>Themes</h3>
+		<ul>
+			for _, t := range props.Tags {
+				if strings.HasPrefix(t, "theme/") {
+					<li>
+						<a href={ templ.URL("/?tags=" + t) } class="open-theme" data-theme-tag={ t }>{ strings.TrimPrefix(t, "theme/") }</a>
+					</li>
+				}
+			}
+		</ul>
+	</div>
+}

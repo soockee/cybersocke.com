@@ -19,7 +19,7 @@ func WithRole(required string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tok, _ := r.Context().Value(session.IdTokenKey).(*firebaseauth.Token)
-			if tok == nil {
+			if tok == nil { // middleware ensures token already verified
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

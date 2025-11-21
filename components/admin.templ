@@ -1,0 +1,34 @@
+package components
+
+import "github.com/soockee/cybersocke.com/storage"
+
+type AdminViewProps struct {
+	Posts     map[string]*storage.Post
+	CSRFToken string
+	Authed    bool
+	ThemeTags []string
+}
+
+templ Admin(props AdminViewProps) {
+	@layout("Admin", GetNavItems(props.Authed)) {
+		<div class="admin-columns">
+			<div class="posts-navigator" data-mode="graph-nav">
+				for _, post := range  storage.SortPostMap(props.Posts) {
+					// Each card clickable; JS intercepts to open overlay
+					@PostCard(PostCardProps{
+						Title:       post.Meta.Name,
+						Description: post.Meta.Lead,
+						Slug:        post.Meta.Slug,
+						Date:        post.Meta.Updated,
+						Tags:        post.Meta.Tags,
+					})
+				}
+				if props.Authed {
+					@UploadBox(props.CSRFToken)
+				}
+				<!-- Overlay container depth indicator; navigator.js manages layers -->
+				<div id="overlay-root"></div>
+			</div>
+		</div>
+	}
+}

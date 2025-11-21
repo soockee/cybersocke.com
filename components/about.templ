@@ -1,16 +1,14 @@
 package components
 
-import (
-	"bytes"
-)
-
+import "bytes"
 
 type AboutViewProps struct {
 	Content bytes.Buffer
+	Authed  bool
 }
 
 templ About(props AboutViewProps) {
-	@layout("About", getNavItems()) {
+	@layout("About", GetNavItems(props.Authed)) {
 		<div>
 			@templ.Raw(props.Content.String())
 		</div>

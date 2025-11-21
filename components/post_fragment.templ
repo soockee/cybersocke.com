@@ -1,0 +1,29 @@
+package components
+
+import (
+	"github.com/soockee/cybersocke.com/storage"
+	"strings"
+)
+
+type PostFragmentProps struct {
+	Post    *storage.Post
+	Related []*storage.Post
+}
+
+templ PostFragment(props PostFragmentProps) {
+	<div class="note-fragment" data-slug={ props.Post.Meta.Slug } data-tags={ strings.Join(props.Post.Meta.Tags, " ") }>
+		<h2>{ props.Post.Meta.Name }</h2>
+		<p class="lead">{ props.Post.Meta.Lead }</p>
+		<div class="fragment-tags">
+			@TagInlineList(props.Post.Meta.Tags, "")
+		</div>
+		<div class="fragment-related">
+			<h3>Related</h3>
+			<ul>
+				for _, rp := range props.Related {
+					<li><a href={ templ.URL("/posts/" + rp.Meta.Slug) } class="open-related" data-slug={ rp.Meta.Slug }>{ rp.Meta.Name }</a></li>
+				}
+			</ul>
+		</div>
+	</div>
+}
