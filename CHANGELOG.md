@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.3](https://github.com/soockee/cybersocke.com/compare/v1.11.2...v1.11.3) (2025-11-21)
+
+
+### Bug Fixes
+
+* remove frontmatter from view ([#33](https://github.com/soockee/cybersocke.com/issues/33)) ([78a2d2e](https://github.com/soockee/cybersocke.com/commit/78a2d2e3706cf2bfb2d0b1244c064b8777634317))
+
 ## [1.11.2](https://github.com/soockee/cybersocke.com/compare/v1.11.1...v1.11.2) (2025-11-21)
 
 
