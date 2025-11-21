@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/soockee/cybersocke.com/compare/v1.9.2...v1.10.0) (2025-11-21)
+
+
+### Features
+
+* tag and graph navigation ([#23](https://github.com/soockee/cybersocke.com/issues/23)) ([1bd801b](https://github.com/soockee/cybersocke.com/commit/1bd801b8d976edf9b6f9520cf6d521dc4dc2c31b))
+
 ## [1.9.2](https://github.com/soockee/cybersocke.com/compare/v1.9.1...v1.9.2) (2025-11-20)
 
 
