@@ -1,0 +1,41 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/" # Location of package manifests
+    schedule:
+      interval: "weekly"
+    # Group all module version bumps into a single PR to avoid per-dependency noise.
+    # You can add additional groups with more specific patterns or update-types if desired.
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"            # match every module
+        # Optionally restrict by update type; comment out to include majors as well.
+        # update-types:
+        #   - "minor"
+        #   - "patch"
+    # Limit simultaneous PRs (single bulk PR at a time)
+    open-pull-requests-limit: 1
+  - package-ecosystem: "docker"
+    directory: "/" # Monitors the Dockerfile in repo root
+    schedule:
+      interval: "weekly"
+    groups:
+      all-images:
+        patterns:
+          - "*"  # group all base image version bumps into one PR
+    open-pull-requests-limit: 1
+  - package-ecosystem: "docker-compose"
+    directory: "/" # Monitors the Dockerfile in repo root
+    schedule:
+      interval: "weekly"
+    groups:
+      all-images:
+        patterns:
+          - "*"  # group all base image version bumps into one PR
+    open-pull-requests-limit: 1
