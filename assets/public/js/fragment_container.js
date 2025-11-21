@@ -29,7 +29,8 @@
       left: container.style.left || rect.left + 'px',
       width: container.style.width || rect.width + 'px',
       height: container.style.height || rect.height + 'px',
-      collapsed: container.dataset.collapsed === 'true'
+      collapsed: container.dataset.collapsed === 'true',
+      prevHeight: container.dataset.prevHeight || ''
     };
   }
 
@@ -57,6 +58,7 @@
     if (preset?.width) container.style.width = preset.width;
     if (preset?.height) container.style.height = preset.height;
     if (preset?.collapsed) container.dataset.collapsed = 'true';
+  if (preset?.prevHeight) container.dataset.prevHeight = preset.prevHeight;
 
     const header = document.createElement('div');
     header.className = 'floating-fragment-header';
@@ -106,8 +108,26 @@
 
     collapseBtn.addEventListener('click', () => {
       const collapsed = container.dataset.collapsed === 'true';
-      container.dataset.collapsed = (!collapsed).toString();
-      collapseBtn.textContent = collapsed ? '–' : '+';
+      if (!collapsed) {
+        // collapsing: store previous height and shrink to header height
+        if (!container.dataset.prevHeight) {
+          container.dataset.prevHeight = container.style.height || (container.getBoundingClientRect().height + 'px');
+        }
+        const headerHeight = header.getBoundingClientRect().height;
+        container.style.height = headerHeight + 'px';
+        container.dataset.collapsed = 'true';
+        collapseBtn.textContent = '+';
+        container.style.resize = 'none';
+      } else {
+        // expanding: restore previous height if available
+        const prev = container.dataset.prevHeight;
+        if (prev) {
+          container.style.height = prev;
+        }
+        container.dataset.collapsed = 'false';
+        collapseBtn.textContent = '–';
+        container.style.resize = 'both';
+      }
       persist(container);
     });
     closeBtn.addEventListener('click', () => { container.remove(); saveAll(); });

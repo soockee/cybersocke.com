@@ -40,6 +40,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := NewApiServer(embedStore, gcsStore, logger, assets, cfg)
-	server.Run()
+	server, err := NewAPIServer(embedStore, gcsStore, logger, assets, cfg)
+	if err != nil {
+		logger.Error("Failed to initialize server", slog.Any("err", err))
+		os.Exit(1)
+	}
+	if err := server.Run(); err != nil {
+		os.Exit(1)
+	}
 }

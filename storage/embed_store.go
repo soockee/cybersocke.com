@@ -48,6 +48,10 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 			if strings.TrimSpace(postMeta.Name) == "" {
 				postMeta.Name = DeriveDisplayName(postMeta.Slug)
 			}
+			// Parse strict created date if provided.
+			if postMeta.Created.IsZero() && strings.TrimSpace(postMeta.CreatedRaw) != "" {
+				postMeta.Created = parseDate(postMeta.CreatedRaw)
+			}
 			// Parse flexible updated timestamp if provided.
 			if postMeta.Updated.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
 				postMeta.Updated = parseTimestamp(postMeta.UpdatedRaw)

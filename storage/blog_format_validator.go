@@ -35,12 +35,11 @@ func (p *PostMeta) Validate() error {
 	}
 	// Tags optional; no validation beyond presence type.
 
-	// Created timestamp required (per minimal frontmatter spec). Accept string or already-parsed time.Time.
-	createdTs := parseAnyTimestamp(p.Created)
+	// Created date required (strict YYYY-MM-DD)
+	createdTs := parseDate(p.CreatedRaw)
 	if createdTs.IsZero() {
-		return errors.New("created timestamp required")
+		return errors.New("created date required (YYYY-MM-DD)")
 	}
-	// Store parsed time back (preserving original interface usage).
 	p.Created = createdTs
 
 	// Parse Updated from raw flexible string
@@ -87,13 +86,15 @@ func parseTimestamp(raw string) time.Time {
 
 // parseAnyTimestamp attempts to parse a timestamp from an arbitrary frontmatter field.
 // Accepts string or time.Time; returns zero value if parsing fails or type unsupported.
-func parseAnyTimestamp(v any) time.Time {
-	switch t := v.(type) {
-	case time.Time:
-		return t
-	case string:
-		return parseTimestamp(t)
-	default:
+// parseDate parses a strict date (YYYY-MM-DD) and returns zero time on failure.
+func parseDate(raw string) time.Time {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
 		return time.Time{}
 	}
+	ts, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return time.Time{}
+	}
+	return ts
 }

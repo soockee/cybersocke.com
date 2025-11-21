@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
@@ -25,16 +26,16 @@ func NewTagPostsHandler(posts *services.PostService, log *slog.Logger) *TagPosts
 
 func (h *TagPostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet {
-		return errors.New("method not allowed")
+		return httpx.ErrMethodNotAllowed
 	}
 	return h.Get(w, r)
 }
 
 // Get returns fragments for posts containing the tag. HTML container carries data-tag attribute.
 func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
-	tag := mux.Vars(r)["tag"]
+	tag := r.PathValue("tag")
 	if tag == "" {
-		return errors.New("missing tag")
+		return httpx.BadRequest("missing tag", nil)
 	}
 	limit := 10
 	if lstr := r.URL.Query().Get("limit"); lstr != "" {
@@ -44,7 +45,7 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 	posts, err := h.postService.GetPostsByTag(tag, limit, r.Context())
 	if err != nil {
-		return err
+		return httpx.Classify(err)
 	}
 	if len(posts) == 0 {
 		w.WriteHeader(http.StatusNotFound)
@@ -54,7 +55,34 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
 	for _, p := range posts {
-		components.PostFragment(components.PostFragmentProps{Post: p, Related: []*storage.Post{}}).Render(r.Context(), w)
+		// Render markdown + build tag families for each fragment
+		clean := services.StripDataview(p.Content)
+		md := services.RenderMD(clean)
+		families := map[string][]string{}
+		for _, t := range p.Meta.Tags {
+			parts := strings.SplitN(t, "/", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			families[parts[0]] = append(families[parts[0]], parts[1])
+		}
+		for k := range families {
+			sort.Strings(families[k])
+		}
+		props := components.PostViewProps{
+			Content:     md,
+			Title:       p.Meta.Name,
+			Slug:        p.Meta.Slug,
+			Tags:        p.Meta.Tags,
+			Related:     []*storage.Post{},
+			Lead:        p.Meta.Lead,
+			Created:     p.Meta.Created,
+			Updated:     p.Meta.Updated,
+			Published:   p.Meta.Published,
+			Aliases:     p.Meta.Aliases,
+			TagFamilies: families,
+		}
+		components.PostFragment(props).Render(r.Context(), w)
 	}
 	w.Write([]byte("</div>"))
 	return nil

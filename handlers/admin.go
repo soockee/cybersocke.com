@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/gorilla/csrf"
 	"github.com/soockee/cybersocke.com/components"
+	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -26,7 +26,7 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	case http.MethodGet:
 		return h.Get(w, r)
 	default:
-		return errors.New("method not allowed")
+		return httpx.ErrMethodNotAllowed
 	}
 }
 
@@ -34,7 +34,7 @@ func (h *AdminHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	posts, err := h.postService.GetPosts(ctx)
 	if err != nil {
-		return err
+		return httpx.Classify(err)
 	}
 	// Retrieve real CSRF token provided by gorilla/csrf middleware.
 	csrfToken := csrf.Token(r)

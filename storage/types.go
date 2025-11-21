@@ -26,7 +26,8 @@ type PostMeta struct {
 	Tags         []string  `yaml:"tags"`
 	Aliases      []string  `yaml:"aliases"`
 	Lead         string    `yaml:"lead"`      // short summary (can substitute description)
-	Created      any       `yaml:"created"`   // may be scalar string or map placeholder
+	CreatedRaw   string    `yaml:"created"`   // raw created date (YYYY-MM-DD) from frontmatter
+	Created      time.Time `yaml:"-"`         // parsed created date (strict date only)
 	UpdatedRaw   string    `yaml:"updated"`   // raw timestamp string from frontmatter (flexible formats)
 	Updated      time.Time `yaml:"-"`         // parsed canonical time (set during validation / parse)
 	PublishedRaw string    `yaml:"published"` // raw published value (string/bool); parsed in validation

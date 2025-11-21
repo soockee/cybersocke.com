@@ -271,6 +271,10 @@ func parsePost(raw []byte) (*Post, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing frontmatter: %w", err)
 	}
+	// Parse strict created date if provided.
+	if meta.Created.IsZero() && strings.TrimSpace(meta.CreatedRaw) != "" {
+		meta.Created = parseDate(meta.CreatedRaw)
+	}
 	// Parse flexible updated timestamp into canonical time if provided.
 	if meta.Updated.IsZero() && strings.TrimSpace(meta.UpdatedRaw) != "" {
 		meta.Updated = parseTimestamp(meta.UpdatedRaw)

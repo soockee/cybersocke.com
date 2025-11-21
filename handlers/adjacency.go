@@ -2,17 +2,16 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 )
 
 // AdjacencyHandler returns weighted neighboring posts for a given post slug.
-// Route: /posts/{id}/adjacency?includeTags=tagA,tagB&minShared=1&limit=12
+// Route: /api/posts/{id}/adjacency?includeTags=tagA,tagB&minShared=1&limit=12
 // If includeTags provided, only those tags are considered for shared tag calculation.
 // minShared defaults to 1. limit defaults to 12 (<=0 means unlimited).
 // Response: JSON { slug: string, neighbors: [ { slug, name, weight, shared_tags, date } ] }
@@ -33,11 +32,11 @@ type adjacencyResponse struct {
 
 func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet {
-		return errors.New("method not allowed")
+		return httpx.ErrMethodNotAllowed
 	}
-	slug := mux.Vars(r)["id"]
+	slug := r.PathValue("id")
 	if slug == "" {
-		return errors.New("missing slug")
+		return httpx.BadRequest("missing slug", nil)
 	}
 	includeRaw := r.URL.Query().Get("includeTags")
 	includeTags := h.tagService.ParseSelectedTags(includeRaw)
@@ -59,7 +58,7 @@ func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) err
 	}
 	neighbors, err := services.ComputeAdjacency(h.postService, slug, includeSet, minShared, limit, r.Context())
 	if err != nil {
-		return err
+		return httpx.Classify(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(adjacencyResponse{Slug: slug, Neighbors: neighbors})

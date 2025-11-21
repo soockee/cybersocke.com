@@ -1,22 +1,20 @@
 package components
 
-import (
-	"github.com/soockee/cybersocke.com/storage"
-	"strings"
-)
+import "strings"
 
-type PostFragmentProps struct {
-	Post    *storage.Post
-	Related []*storage.Post
-}
-
-templ PostFragment(props PostFragmentProps) {
-	<div class="note-fragment" data-slug={ props.Post.Meta.Slug } data-tags={ strings.Join(props.Post.Meta.Tags, " ") }>
-		<h2>{ props.Post.Meta.Name }</h2>
-		<p class="lead">{ props.Post.Meta.Lead }</p>
+// PostFragment now shares the same prop shape as full post views via PostViewProps.
+// We rely on pre-rendered HTML in props.Content (bytes.Buffer) and reuse metadata fields.
+// Related posts are included in props.Related.
+templ PostFragment(props PostViewProps) {
+	<div class="note-fragment" data-slug={ props.Slug } data-tags={ strings.Join(props.Tags, " ") }>
+		<h2>{ props.Title }</h2>
+		<p class="lead">{ props.Lead }</p>
 		<div class="fragment-tags">
-			@TagInlineList(props.Post.Meta.Tags, "")
+			@TagInlineList(props.Tags, "")
 		</div>
+		if props.Content.Len() > 0 {
+			@templ.Raw(props.Content.String())
+		}
 		<div class="fragment-related">
 			<h3>Related</h3>
 			<ul>
