@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -37,14 +38,26 @@ func (h *AuthCallbackHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *AuthCallbackHandler) Post(w http.ResponseWriter, r *http.Request) error {
+	// Decode JSON payload (expects {"idToken":"<token>"}). Unknown fields rejected.
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
 	var req SessionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := dec.Decode(&req); err != nil {
 		return httpx.BadRequest("invalid request", err)
 	}
+	if req.IDToken == "" {
+		return httpx.BadRequest("missing idToken", nil)
+	}
 
-	session := middleware.GetSession(r)
-	session.Values["id_token"] = req.IDToken
-	session.Save(r, w)
+	s := middleware.GetSession(r)
+	if s == nil {
+		return httpx.Internal(errors.New("session missing"))
+	}
+	// Persist ID token into session cookie; actual save occurs in session middleware.
+	s.Values["id_token"] = req.IDToken
+
+	// Explicit success response to ensure status code is logged and proxy receives a valid HTTP response.
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
