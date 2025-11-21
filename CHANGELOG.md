@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/soockee/cybersocke.com/compare/v1.11.1...v1.11.2) (2025-11-21)
+
+
+### Bug Fixes
+
+* add explicit write in serveHTTP ([#31](https://github.com/soockee/cybersocke.com/issues/31)) ([09ab095](https://github.com/soockee/cybersocke.com/commit/09ab0957816d88b76a878439bf43fbf2d9bc352e))
+
 ## [1.11.1](https://github.com/soockee/cybersocke.com/compare/v1.11.0...v1.11.1) (2025-11-21)
 
 
