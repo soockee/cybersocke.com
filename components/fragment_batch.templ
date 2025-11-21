@@ -1,0 +1,17 @@
+package components
+
+// FragmentBatch wraps a set of post fragments for a given tag. When empty, shows a placeholder message.
+// The tag is escaped automatically by templ when rendered in the data-tag attribute.
+templ FragmentBatch(tag string, empty bool, posts []PostViewProps) {
+	if empty {
+		<div class="fragment-batch empty" data-tag={ tag }>
+			<p>No posts for tag.</p>
+		</div>
+	} else {
+		<div class="fragment-batch" data-tag={ tag }>
+			for _, p := range posts {
+				@PostFragment(p)
+			}
+		</div>
+	}
+}

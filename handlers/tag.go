@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/soockee/cybersocke.com/components"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
@@ -24,18 +23,21 @@ func NewTagPostsHandler(posts *services.PostService, log *slog.Logger) *TagPosts
 	return &TagPostsHandler{log: log, postService: posts}
 }
 
-func (h *TagPostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *TagPostsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.log, ErrMethodNotAllowed)
+		return
 	}
-	return h.Get(w, r)
+	if err := h.Get(w, r); err != nil {
+		writeHTTPError(w, r, h.log, err)
+	}
 }
 
 // Get returns fragments for posts containing the tag. HTML container carries data-tag attribute.
 func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	tag := r.PathValue("tag")
 	if tag == "" {
-		return httpx.BadRequest("missing tag", nil)
+		return BadRequest("missing tag", nil)
 	}
 	limit := 10
 	if lstr := r.URL.Query().Get("limit"); lstr != "" {
@@ -45,15 +47,17 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	}
 	posts, err := h.postService.GetPostsByTag(tag, limit, r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	if len(posts) == 0 {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("<div class=\"fragment-batch empty\" data-tag=\"" + tag + "\"><p>No posts for tag.</p></div>"))
+		components.FragmentBatch(tag, true, nil).Render(r.Context(), w)
 		return nil
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
+	w.WriteHeader(http.StatusOK)
+	var viewProps []components.PostViewProps
 	for _, p := range posts {
 		// Render markdown + build tag families for each fragment
 		clean := services.StripDataview(p.Content)
@@ -82,8 +86,8 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 			Aliases:     p.Meta.Aliases,
 			TagFamilies: families,
 		}
-		components.PostFragment(props).Render(r.Context(), w)
+		viewProps = append(viewProps, props)
 	}
-	w.Write([]byte("</div>"))
+	components.FragmentBatch(tag, false, viewProps).Render(r.Context(), w)
 	return nil
 }

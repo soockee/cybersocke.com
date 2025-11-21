@@ -6,7 +6,6 @@ import (
 
 	"github.com/gorilla/csrf"
 	"github.com/soockee/cybersocke.com/components"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -21,12 +20,14 @@ func NewAdminHandler(posts *services.PostService, auth *services.AuthService, lo
 	return &AdminHandler{Log: log, postService: posts, authService: auth}
 }
 
-func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		return h.Get(w, r)
+		if err := h.Get(w, r); err != nil {
+			writeHTTPError(w, r, h.Log, err)
+		}
 	default:
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.Log, nil)
 	}
 }
 
@@ -34,8 +35,10 @@ func (h *AdminHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	posts, err := h.postService.GetPosts(ctx)
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	// Retrieve real CSRF token provided by gorilla/csrf middleware.
 	csrfToken := csrf.Token(r)
 	// Determine authentication from context (verified id token presence).

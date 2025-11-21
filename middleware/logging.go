@@ -27,7 +27,6 @@ func (rw *responseWriter) WriteHeader(code int) {
 	if rw.wroteHeader {
 		return
 	}
-
 	rw.status = code
 	rw.ResponseWriter.WriteHeader(code)
 	rw.wroteHeader = true
@@ -47,6 +46,10 @@ func WithLogging(logger *slog.Logger) func(http.Handler) http.Handler {
 			wrapped := wrapResponseWriter(w)
 			next.ServeHTTP(wrapped, r)
 			status := wrapped.status
+			if status == 0 {
+				logger.Warn("http request missing explicit status (no WriteHeader before body?)",
+					slog.String("method", r.Method), slog.String("path", r.URL.EscapedPath()))
+			}
 			path := r.URL.EscapedPath()
 
 			logger.Info("http request", slog.Int("status", status), slog.String("method", r.Method), slog.String("path", path), slog.Duration("duration", time.Since(start)))

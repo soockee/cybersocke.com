@@ -12,17 +12,13 @@ import (
 
 	"github.com/soockee/cybersocke.com/config"
 	"github.com/soockee/cybersocke.com/handlers"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
 
-type apiFunc func(w http.ResponseWriter, r *http.Request) error
-
-type ApiError struct {
-	Error string
-}
+// APIError retained for potential future structured error responses.
+type APIError struct{ Error string }
 
 // APIServer hosts all HTTP routes and their dependent services.
 // It is constructed once and its services are reused across handlers.
@@ -135,9 +131,9 @@ func (s *APIServer) InitRoutes() (*http.ServeMux, error) {
 	}
 
 	// Lightweight helper to register a pattern with handler + optional extra middleware.
-	register := func(pattern string, h apiFunc, extra ...middlewareFunc) {
+	register := func(pattern string, h http.Handler, extra ...middlewareFunc) {
 		stack := append(global, extra...)
-		final := chain(makeHTTPHandleFunc(s.logger, h), stack...)
+		final := chain(h, stack...)
 		mux.Handle(pattern, final)
 	}
 
@@ -151,7 +147,7 @@ func (s *APIServer) InitRoutes() (*http.ServeMux, error) {
 }
 
 // registerPublic attaches all unauthenticated & public endpoints.
-func (s *APIServer) registerPublic(register func(string, apiFunc, ...middlewareFunc)) {
+func (s *APIServer) registerPublic(register func(string, http.Handler, ...middlewareFunc)) {
 	login := handlers.NewLoginHandler(s.logger)
 	callback := handlers.NewAuthCallbackHandler(s.logger)
 	post := handlers.NewPostHandler(s.postService, s.logger)
@@ -160,43 +156,42 @@ func (s *APIServer) registerPublic(register func(string, apiFunc, ...middlewareF
 	tagPosts := handlers.NewTagPostsHandler(s.postService, s.logger)
 	graph := handlers.NewGraphHandler(s.logger, s.graphService, s.postService)
 
-	register("GET /auth", login.ServeHTTP)
+	register("GET /auth", login)
 	// Callback: GET for redirect completion; POST carries ID token JSON.
-	register("GET /auth/google/callback", callback.ServeHTTP)
-	register("POST /auth/google/callback", callback.ServeHTTP)
+	register("GET /auth/google/callback", callback)
+	register("POST /auth/google/callback", callback)
 	// Assets subtree using wildcard capture.
-	register("GET /assets/{rest...}", func(w http.ResponseWriter, r *http.Request) error {
+	register("GET /assets/{rest...}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.StripPrefix("/assets/", s.embedStore.GetAssets()).ServeHTTP(w, r)
-		return nil
-	})
-	register("GET /posts/{id}", post.ServeHTTP)
-	register("GET /posts/{id}/fragment", post.ServeHTTP)
-	register("GET /", home.ServeHTTP)
-	register("GET /posts/fragments", fragments.ServeHTTP)
-	register("GET /tags/{tag}/posts", tagPosts.ServeHTTP)
-	register("GET /graph", graph.ServeHTTP)
+	}))
+	register("GET /posts/{id}", post)
+	register("GET /posts/{id}/fragment", post)
+	register("GET /", home)
+	register("GET /posts/fragments", fragments)
+	register("GET /tags/{tag}/posts", tagPosts)
+	register("GET /graph", graph)
 }
 
 // apiRoutes returns JSON API endpoints (versionless initial design).
 // registerAPI attaches JSON API endpoints.
-func (s *APIServer) registerAPI(register func(string, apiFunc, ...middlewareFunc)) {
+func (s *APIServer) registerAPI(register func(string, http.Handler, ...middlewareFunc)) {
 	if s.graphService != nil {
-		register("GET /api/graph", handlers.NewGraphAPIHandler(s.logger, s.graphService).ServeHTTP)
+		register("GET /api/graph", handlers.NewGraphAPIHandler(s.logger, s.graphService))
 	}
-	register("GET /api/posts/{id}/adjacency", handlers.NewAdjacencyHandler(s.postService, s.tagService, s.logger).ServeHTTP)
+	register("GET /api/posts/{id}/adjacency", handlers.NewAdjacencyHandler(s.postService, s.tagService, s.logger))
 }
 
 // secureRoutes adds authenticated endpoints (CSRF protected).
-func (s *APIServer) registerSecure(register func(string, apiFunc, ...middlewareFunc)) {
+func (s *APIServer) registerSecure(register func(string, http.Handler, ...middlewareFunc)) {
 	secure := []middlewareFunc{
 		middleware.WithCSRF(s.cfg.CSRFSecret, !s.cfg.LocalDev),
 		middleware.WithAuthentication(s.authService, s.sessionStore, s.logger),
 	}
-	register("GET /admin", handlers.NewAdminHandler(s.postService, s.authService, s.logger).ServeHTTP, secure...)
+	register("GET /admin", handlers.NewAdminHandler(s.postService, s.authService, s.logger), secure...)
 }
 
 // roleRoutes attaches role-gated write operations.
-func (s *APIServer) registerRole(register func(string, apiFunc, ...middlewareFunc)) {
+func (s *APIServer) registerRole(register func(string, http.Handler, ...middlewareFunc)) {
 	secure := []middlewareFunc{
 		middleware.WithCSRF(s.cfg.CSRFSecret, !s.cfg.LocalDev),
 		middleware.WithAuthentication(s.authService, s.sessionStore, s.logger),
@@ -204,23 +199,7 @@ func (s *APIServer) registerRole(register func(string, apiFunc, ...middlewareFun
 	role := []middlewareFunc{
 		middleware.WithRole("user", s.logger),
 	}
-	register("POST /posts", handlers.NewPostHandler(s.postService, s.logger).ServeHTTP, append(secure, role...)...)
+	register("POST /posts", handlers.NewPostHandler(s.postService, s.logger), append(secure, role...)...)
 }
 
-func makeHTTPHandleFunc(logger *slog.Logger, f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := f(w, r); err != nil {
-			he := httpx.Classify(err)
-			if logger != nil {
-				// Log full details including cause if present.
-				if he.Cause != nil {
-					logger.Error("request error", slog.String("method", r.Method), slog.String("path", r.URL.Path), slog.Int("status", he.Status), slog.Any("err", he.Cause))
-				} else {
-					logger.Error("request error", slog.String("method", r.Method), slog.String("path", r.URL.Path), slog.Int("status", he.Status), slog.Any("err", err))
-				}
-			}
-			w.WriteHeader(he.Status)
-			_, _ = w.Write([]byte(he.Message))
-		}
-	}
-}
+// makeHTTPHandleFunc removed; handlers now implement http.Handler directly with internal error handling.

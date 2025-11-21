@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/soockee/cybersocke.com/internal/httpx"
-
 	"github.com/soockee/cybersocke.com/components"
 	"github.com/soockee/cybersocke.com/services"
 )
@@ -22,18 +20,21 @@ func NewLoginHandler(log *slog.Logger) *LoginHandler {
 	}
 }
 
-func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		return h.Post(w, r)
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed) // still disallowed
 	case http.MethodGet:
-		return h.Get(w, r)
+		if err := h.Get(w, r); err != nil {
+			writeHTTPError(w, r, h.Log, err)
+		}
 	default:
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed)
 	}
 }
 
 func (h *LoginHandler) Get(w http.ResponseWriter, r *http.Request) error {
+	w.WriteHeader(http.StatusOK)
 	h.View(w, r, components.LoginViewProps{
 		FirebaseInsensitiveAPIKey: os.Getenv("FIREBASE_INSENSITIVE_API_KEY"),
 		FirebaseAuthDomain:        os.Getenv("FIREBASE_AUTH_DOMAIN"),
@@ -42,7 +43,7 @@ func (h *LoginHandler) Get(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *LoginHandler) Post(w http.ResponseWriter, r *http.Request) error {
-	return httpx.ErrMethodNotAllowed
+	return ErrMethodNotAllowed
 }
 
 func (h *LoginHandler) View(w http.ResponseWriter, r *http.Request, props components.LoginViewProps) {
