@@ -1,0 +1,32 @@
+package components
+
+type ExplorerLayoutProps struct {
+	Post      PostViewProps
+	Adjacency []AdjacencyEntry
+	Tags      []string // active tag filter (tag view if len>0)
+	Authed    bool     // authentication status for dynamic nav
+}
+
+// ExplorerLayout presents a focused post with an adjacency sidebar.
+templ ExplorerLayout(p ExplorerLayoutProps) {
+	@layout(p.Post.Title, GetNavItems(p.Authed)) {
+		<link rel="stylesheet" href="/assets/css/site.css"/>
+		if len(p.Tags) > 0 {
+			<div class="explorer-grid">
+				<div class="explorer-main" style="max-width:100%">
+					@MiniGraph("tag:"+p.Tags[0], p.Adjacency, "tag", p.Tags[0])
+				</div>
+			</div>
+		} else {
+			<div class="explorer-grid">
+				<div class="explorer-main">
+					@PostDetail(p.Post)
+				</div>
+				<div class="explorer-side">
+					@MiniGraph(p.Post.Slug, p.Adjacency, "post", "")
+					@AdjacencyPanel(AdjacencyPanelProps{CurrentSlug: p.Post.Slug, Entries: p.Adjacency})
+				</div>
+			</div>
+		}
+	}
+}

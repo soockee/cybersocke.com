@@ -17,7 +17,9 @@ templ Header(title string) {
 		<meta name="theme-color" content="#ffffff"/>
 		<link rel="manifest" href="/assets/favicon/site.webmanifest"/>
 		<meta name="description" content="Maintainer: S. Stockhause"/>
-		<script src="/assets/js/htmx-2.0.4.min.js"></script>
+		<script src="/assets/js/htmx-2.0.4.min.js" defer></script>
+		<script src="/assets/js/navigator.js" defer></script>
+		<script src="/assets/js/fragment_container.js" defer></script>
 		<title>{ title }</title>
 	</head>
 }

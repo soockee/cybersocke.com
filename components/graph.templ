@@ -9,10 +9,11 @@ type GraphViewProps struct {
 	Graph         *storage.TagGraph
 	MinSharedTags int
 	IncludeTags   []string
+	Authed        bool
 }
 
 templ Graph(props GraphViewProps) {
-	@layout("Graph", getNavItems()) {
+	@layout("Graph", GetNavItems(props.Authed)) {
 		<div>
 			<h1>Content Graph</h1>
 			<p>Nodes: { len(props.Graph.Posts) } | Edges: { len(props.Graph.Edges) } | MinSharedTags: { props.MinSharedTags }</p>

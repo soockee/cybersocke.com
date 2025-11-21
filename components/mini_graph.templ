@@ -1,0 +1,29 @@
+package components
+
+import "fmt"
+
+// MiniGraph renders a Cytoscape graph for either a focused post (mode="post")
+// or a tag-centric view (mode="tag"). focusLabel is shown only for tag mode.
+// entries are adjacency posts related to the focus.
+templ MiniGraph(currentSlug string, entries []AdjacencyEntry, mode string, focusLabel string) {
+	<div class="mini-graph" aria-label="Adjacency graph">
+		<h2>Graph</h2>
+		if len(entries) == 0 {
+			<p class="empty">No edges</p>
+		}
+		if len(entries) > 0 {
+			<div id="mini-cy" class="cy-mini" data-current={ currentSlug } data-mode={ mode } data-focus-label={ focusLabel } style="width:100%;height:400px" aria-label={ fmt.Sprintf("Graph of related %s", mode) } role="application" tabindex="0"></div>
+			<div class="mini-cy-adjacency" style="display:none">
+				<span class="adjacency-row focus" data-slug={ currentSlug } data-name={ focusLabel } data-weight="0"></span>
+				for _, e := range entries {
+					<span class="adjacency-row" data-slug={ e.Slug } data-name={ e.Name } data-weight={ e.Weight }></span>
+				}
+			</div>
+			<script defer src="/assets/js/cytoscape/3.33.1-cytoscape.min.js"></script>
+			<script defer src="/assets/js/cytoscape/2.0.1-layout-base.js"></script>
+			<script defer src="/assets/js/cytoscape/2.2.0-cose-base.js"></script>
+			<script defer src="/assets/js/cytoscape/2.2.0-fcose.js"></script>
+			<script defer src="/assets/js/minigraph.js"></script>
+		}
+	</div>
+}

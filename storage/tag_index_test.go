@@ -8,9 +8,9 @@ import (
 )
 
 // helper to build a post
-func buildPost(slug string, date string, tags []string) *Post {
-	ts, _ := time.Parse("2006-01-02", date)
-	return &Post{Meta: PostMeta{Slug: slug, Name: DeriveDisplayName(slug), Date: ts, Tags: tags}, Content: []byte("content")}
+func buildPost(slug string, updated string, tags []string) *Post {
+	ts, _ := time.Parse("2006-01-02", updated)
+	return &Post{Meta: PostMeta{Slug: slug, Name: DeriveDisplayName(slug), UpdatedRaw: updated, Updated: ts, Tags: tags, Published: true}, Content: []byte("content")}
 }
 
 func seedStore() *GCSStore {
@@ -37,7 +37,7 @@ func TestSanitizeFilename(t *testing.T) {
 		"__spaces  multiple__":   "spaces-multiple.md",
 	}
 	for in, expect := range cases {
-		got := sanitizeFilename(in)
+		got := SanitizeFilename(in)
 		if got != expect {
 			t.Fatalf("sanitizeFilename(%q) = %q; want %q", in, got, expect)
 		}
@@ -51,12 +51,9 @@ func TestGetPostsByTagsAnyAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ANY query error: %v", err)
 	}
-	if len(any) != 3 { // alpha, beta, delta (kubernetes) + gamma, delta (cloud-architecture) unique => alpha beta gamma delta (4) Wait re-evaluate
-		// Actually tags: kubernetes: alpha beta delta; cloud-architecture: gamma delta -> union size 4
-		// Ensure expectation matches
-		if len(any) != 4 {
-			t.Fatalf("ANY query size=%d want 4", len(any))
-		}
+	// kubernetes: alpha, beta, delta; cloud-architecture: gamma, delta => union = alpha, beta, gamma, delta (4)
+	if len(any) != 4 {
+		t.Fatalf("ANY query size=%d want 4", len(any))
 	}
 	// ALL query
 	all, err := s.GetPostsByTags(context.Background(), []string{"theme/kubernetes", "theme/cloud-architecture"}, true)

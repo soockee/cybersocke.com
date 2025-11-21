@@ -1,42 +1,7 @@
 package components
 
-import styles "github.com/soockee/cybersocke.com/components/styles"
-
-css NavBar() {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 100px;
-	background-color: #333;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-css NavBarUnorderdList() {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-	display: flex;
-	gap: 30px;
-}
-
-css NavBarListItem() {
-	display: inline;
-}
-
-css NavBarLink() {
-	text-decoration: none;
-	color: #333;
-}
-
-templ NavbarCSS() {
-  @styles.NavbarStylesHandle.Once() {
-    @styles.NavbarStyles
-  }
-}
-
-
 templ navTemplate(links []NavItem) {
-	@NavbarCSS()
+	<link rel="stylesheet" href="/assets/css/site.css"/>
 	<nav class="navbar">
 		<ul>
 			for _, link := range links {

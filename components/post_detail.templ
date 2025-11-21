@@ -1,0 +1,36 @@
+package components
+
+import "time"
+
+// PostDetail renders the inner article for a post without global layout wrapper.
+templ PostDetail(p PostViewProps) {
+	<article class="post-full" data-slug={ p.Slug }>
+		<div class="post-actions">
+			<button class="button pop-fragment-btn" type="button" data-slug={ p.Slug } aria-label="Open floating fragment" title="Open floating fragment">Pop Out</button>
+		</div>
+		<div class="post-dates" aria-label="Post timestamps">
+			<div class="date-item">
+				<span class="date-label" title="Original creation date">Created:</span>
+				<time datetime={ p.Created.Format(time.RFC3339) }>{ p.Created.Format("Jan 2, 2006") }</time>
+			</div>
+			<div class="date-item">
+				<span class="date-label" title="Last updated date">Updated:</span>
+				<time datetime={ p.Updated.Format(time.RFC3339) }>{ p.Updated.Format("Jan 2, 2006") }</time>
+			</div>
+		</div>
+		<div class="post-tags">
+			<strong>All Tags:</strong>@TagInlineList(p.Tags, "/?tags=")
+		</div>
+		if len(p.Related) > 0 {
+			<section class="related-posts">
+				<h2>Related Posts</h2>
+				<ul>
+					for _, rp := range p.Related {
+						<li><a href={ templ.URL("/posts/" + rp.Meta.Slug) }>{ rp.Meta.Name }</a></li>
+					}
+				</ul>
+			</section>
+		}
+		@templ.Raw(p.Content.String())
+	</article>
+}

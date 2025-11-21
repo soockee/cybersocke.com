@@ -104,3 +104,28 @@ func includesAll(tags []string, selected []string) bool {
 	}
 	return true
 }
+
+// ListFamilyTags returns the unique tags under a given family prefix (e.g. "theme").
+// For family "theme" this will return tags like: theme/observability, theme/platform
+// Ordering is lexicographic for stable UI grouping.
+func (ts *TagService) ListFamilyTags(posts map[string]*storage.Post, family string) []string {
+	family = strings.TrimSpace(family)
+	if family == "" {
+		return []string{}
+	}
+	prefix := family + "/"
+	uniq := map[string]struct{}{}
+	for _, p := range posts {
+		for _, t := range p.Meta.Tags {
+			if strings.HasPrefix(t, prefix) {
+				uniq[t] = struct{}{}
+			}
+		}
+	}
+	out := make([]string, 0, len(uniq))
+	for t := range uniq {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}

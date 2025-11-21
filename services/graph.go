@@ -52,3 +52,20 @@ func (gs *GraphService) ParseOptions(values url.Values) storage.TagGraphOptions 
 func (gs *GraphService) Build(ctx context.Context, opts storage.TagGraphOptions) (*storage.TagGraph, error) {
 	return gs.builder.BuildTagGraph(ctx, opts)
 }
+
+// ComputeTagCounts returns a map of tag -> number of posts containing that tag (duplicates in a single post ignored).
+// The input is a map of slug->*Post as returned by PostService.GetPosts for efficiency.
+func (gs *GraphService) ComputeTagCounts(posts map[string]*storage.Post) map[string]int {
+	counts := make(map[string]int)
+	for _, p := range posts {
+		seen := make(map[string]struct{}, len(p.Meta.Tags))
+		for _, t := range p.Meta.Tags {
+			if _, dup := seen[t]; dup { // ignore duplicates within same post
+				continue
+			}
+			seen[t] = struct{}{}
+			counts[t]++
+		}
+	}
+	return counts
+}

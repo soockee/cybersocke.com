@@ -1,0 +1,48 @@
+package components
+
+import (
+	"strings"
+	"time"
+)
+
+// AdjacencyEntry represents a neighboring post with shared tag metadata.
+type AdjacencyEntry struct {
+	Slug       string
+	Name       string
+	Weight     int
+	SharedTags []string
+	Date       time.Time
+}
+
+type AdjacencyPanelProps struct {
+	CurrentSlug string
+	Entries     []AdjacencyEntry
+}
+
+// AdjacencyPanel renders a sidebar list of neighboring posts ranked by weight.
+templ AdjacencyPanel(p AdjacencyPanelProps) {
+	<aside class="adjacency-panel" aria-label="Adjacent posts">
+		<h2>Adjacent</h2>
+		if len(p.Entries) == 0 {
+			<p class="empty">No adjacent posts</p>
+		}
+		if len(p.Entries) > 0 {
+			<ul>
+				for _, e := range p.Entries {
+					<li>
+						<a href={ templ.URL("/posts/" + e.Slug) } data-slug={ e.Slug } title={ "Shared tags: " + strings.Join(e.SharedTags, ", ") }>{ e.Name }</a>
+						<span class="adj-weight" aria-label={ "shared tags count" }>{ e.Weight }</span>
+						<div class="shared-tags">
+							for i, t := range e.SharedTags {
+								<span class="tag" data-tag={ t }>{ t }</span>
+								if i < len(e.SharedTags)-1 {
+									<span class="sep">·</span>
+								}
+							}
+						</div>
+					</li>
+				}
+			</ul>
+		}
+	</aside>
+}

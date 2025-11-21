@@ -15,25 +15,26 @@ import (
 
 	"cloud.google.com/go/storage"
 	firebaseauth "firebase.google.com/go/v4/auth"
-	"github.com/soockee/cybersocke.com/parser/frontmatter"
-	"github.com/soockee/cybersocke.com/session"
+
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+
+	"github.com/soockee/cybersocke.com/parser/frontmatter"
+	"github.com/soockee/cybersocke.com/session"
 )
 
 type GCSStore struct {
+	logger     *slog.Logger
 	bucketName string
 	client     *storage.Client
-	logger     *slog.Logger
 
 	mu        sync.RWMutex
-	tagIndex  map[string]map[string]struct{} // tag -> set(slug)
-	postCache map[string]*Post               // parsed posts cache
+	tagIndex  map[string]map[string]struct{}
+	postCache map[string]*Post
 
-	// Graph caching / incremental update fields
-	edgeMap      map[string]*GraphEdge // key slugA|slugB (slugA < slugB)
-	graphOptions TagGraphOptions       // last build options
-	graphReady   bool                  // indicates edgeMap initialized for given options
+	edgeMap      map[string]*GraphEdge
+	graphOptions TagGraphOptions
+	graphReady   bool
 }
 
 // NewGCSStore creates a GCS backed store using a base64 encoded service account key.
@@ -155,13 +156,13 @@ func (s *GCSStore) GetAssets() http.Handler {
 
 func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx context.Context) error {
 	// Require authenticated Firebase user (middleware should have injected token)
-	firebaseTok, ok := ctx.Value(session.IdTokenKey).(*firebaseauth.Token)
-	if !ok || firebaseTok == nil {
+	firebaseTok, _ := ctx.Value(session.IdTokenKey).(*firebaseauth.Token)
+	if firebaseTok == nil { // presence implies prior successful verification
 		return fmt.Errorf("unauthorized: firebase token missing")
 	}
 
 	// Derive slug from original filename (ignore any frontmatter slug)
-	derivedSlug := sanitizeFilename(originalFilename)
+	derivedSlug := SanitizeFilename(originalFilename)
 	postMeta := PostMeta{}
 	if _, err := frontmatter.Parse(strings.NewReader(string(content)), &postMeta); err != nil {
 		return err
@@ -270,17 +271,27 @@ func parsePost(raw []byte) (*Post, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing frontmatter: %w", err)
 	}
-	// Derive Date from updated if not already set (Validate not called on read path)
-	if meta.Date.IsZero() && strings.TrimSpace(meta.UpdatedRaw) != "" {
-		if ts := parseTimestamp(meta.UpdatedRaw); !ts.IsZero() {
-			meta.Date = ts
-		}
+	// Parse flexible updated timestamp into canonical time if provided.
+	if meta.Updated.IsZero() && strings.TrimSpace(meta.UpdatedRaw) != "" {
+		meta.Updated = parseTimestamp(meta.UpdatedRaw)
+	}
+	// Parse published flexible boolean (string or bool) into canonical bool.
+	rawPub := strings.ToLower(strings.TrimSpace(meta.PublishedRaw))
+	switch rawPub {
+	case "", "false", "no", "0", "off":
+		meta.Published = false
+	case "true", "yes", "1", "on":
+		meta.Published = true
+	default:
+		// treat invalid as false; do not error during passive parsing
+		meta.Published = false
 	}
 	return &Post{Meta: meta, Content: body}, nil
 }
 
-// sanitizeFilename converts an arbitrary filename to a lowercase kebab-case slug with .md extension.
-func sanitizeFilename(name string) string {
+// SanitizeFilename converts an arbitrary filename to a lowercase kebab-case slug with .md extension.
+// Exported to allow handlers to provide immediate feedback (e.g., predicted slug) after upload.
+func SanitizeFilename(name string) string {
 	name = strings.ToLower(name)
 	// Remove any path components
 	if idx := strings.LastIndex(name, "/"); idx >= 0 {
@@ -380,10 +391,10 @@ func (s *GCSStore) GetPostsByTags(ctx context.Context, tags []string, matchAll b
 	}
 	// Sort by date desc (newest first) then slug asc for stability
 	sort.Slice(posts, func(i, j int) bool {
-		if posts[i].Meta.Date.Equal(posts[j].Meta.Date) {
+		if posts[i].Meta.Updated.Equal(posts[j].Meta.Updated) {
 			return posts[i].Meta.Slug < posts[j].Meta.Slug
 		}
-		return posts[i].Meta.Date.After(posts[j].Meta.Date)
+		return posts[i].Meta.Updated.After(posts[j].Meta.Updated)
 	})
 	return posts, nil
 }
@@ -430,8 +441,8 @@ func (s *GCSStore) GetRelatedPosts(ctx context.Context, slug string, limit int) 
 		if ci != cj {
 			return ci > cj // more shared tags first
 		}
-		if !related[i].Meta.Date.Equal(related[j].Meta.Date) {
-			return related[i].Meta.Date.After(related[j].Meta.Date)
+		if !related[i].Meta.Updated.Equal(related[j].Meta.Updated) {
+			return related[i].Meta.Updated.After(related[j].Meta.Updated)
 		}
 		return related[i].Meta.Slug < related[j].Meta.Slug
 	})
@@ -502,7 +513,9 @@ func (s *GCSStore) RebuildTagIndex(ctx context.Context) error { // ctx reserved 
 
 // ValidateTags enforces basic tag architecture cardinalities & family prefixes.
 func ValidateTags(meta *PostMeta) error {
-	families := map[string]struct{}{"type": {}, "structure": {}, "source": {}, "theme": {}, "target": {}, "status": {}, "maturity": {}, "quality": {}}
+	// Allowed families restricted to a minimal curated set.
+	// Only these families are permitted: type, role, structure, source, theme, target.
+	families := map[string]struct{}{"type": {}, "role": {}, "structure": {}, "source": {}, "theme": {}, "target": {}}
 	counts := map[string]int{}
 	unique := map[string]struct{}{}
 	filtered := make([]string, 0, len(meta.Tags))
@@ -534,6 +547,10 @@ func ValidateTags(meta *PostMeta) error {
 	}
 	if c := counts["type"]; c < 1 || c > 2 {
 		return fmt.Errorf("type/* tags must be 1-2 (got %d)", c)
+	}
+	// role family optional; at most 3 distinct roles to avoid overclassification
+	if c := counts["role"]; c > 3 {
+		return fmt.Errorf("role/* tags must be 0-3 (got %d)", c)
 	}
 	if c := counts["theme"]; c < 1 || c > 5 {
 		return fmt.Errorf("theme/* tags must be 1-5 (got %d)", c)

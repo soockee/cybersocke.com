@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"path"
 	"sort"
 	"strings"
 
@@ -21,10 +22,12 @@ type EmbedStore struct {
 func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, error) {
 	posts := map[string]Post{}
 
-	files, err := assets.ReadDir(postDir)
-	if err != nil {
-		return nil, err
-	}
+	// files, err := assets.ReadDir(postDir)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// empty placeholder
+	files := []fs.DirEntry{}
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -45,11 +48,19 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 			if strings.TrimSpace(postMeta.Name) == "" {
 				postMeta.Name = DeriveDisplayName(postMeta.Slug)
 			}
-			// Derive date from updated field on read if zero
-			if postMeta.Date.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
-				if ts := parseTimestamp(postMeta.UpdatedRaw); !ts.IsZero() {
-					postMeta.Date = ts
-				}
+			// Parse flexible updated timestamp if provided.
+			if postMeta.Updated.IsZero() && strings.TrimSpace(postMeta.UpdatedRaw) != "" {
+				postMeta.Updated = parseTimestamp(postMeta.UpdatedRaw)
+			}
+			// Parse flexible published boolean (string or bool) if provided.
+			rawPub := strings.ToLower(strings.TrimSpace(postMeta.PublishedRaw))
+			switch rawPub {
+			case "", "false", "no", "0", "off":
+				postMeta.Published = false
+			case "true", "yes", "1", "on":
+				postMeta.Published = true
+			default:
+				postMeta.Published = false // ignore invalid
 			}
 			posts[postMeta.Slug] = Post{Meta: postMeta, Content: content}
 		}
@@ -59,12 +70,23 @@ func NewEmbedStore(postDir, publicDir string, assets embed.FS) (*EmbedStore, err
 	if err != nil {
 		return nil, err
 	}
-	fs := http.FileServer(http.FS(public))
+	baseFS := http.FileServer(http.FS(public))
+	// Wrap to enforce correct JS MIME type (some environments default to text/plain)
+	wrapped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		// normalize path extension
+		ext := strings.ToLower(path.Ext(p))
+		if ext == ".js" {
+			// Always set explicit JS MIME to avoid strict MIME rejection
+			w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+		}
+		baseFS.ServeHTTP(w, r)
+	})
 
 	return &EmbedStore{
 		assets: assets,
 		posts:  posts,
-		fs:     fs,
+		fs:     wrapped,
 	}, nil
 }
 
@@ -209,8 +231,8 @@ func (s *EmbedStore) GetRelatedPosts(ctx context.Context, slug string, limit int
 		if ci != cj {
 			return ci > cj
 		}
-		if !related[i].Meta.Date.Equal(related[j].Meta.Date) {
-			return related[i].Meta.Date.After(related[j].Meta.Date)
+		if !related[i].Meta.Updated.Equal(related[j].Meta.Updated) {
+			return related[i].Meta.Updated.After(related[j].Meta.Updated)
 		}
 		return related[i].Meta.Slug < related[j].Meta.Slug
 	})
