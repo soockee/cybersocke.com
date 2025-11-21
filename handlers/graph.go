@@ -3,10 +3,8 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/soockee/cybersocke.com/components"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -27,27 +25,21 @@ func NewGraphHandler(log *slog.Logger, gs *services.GraphService, ps *services.P
 	return &GraphHandler{Log: log, GraphService: gs, PostService: ps}
 }
 
-func (h *GraphHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *GraphHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed)
+		return
 	}
 	posts, err := h.PostService.GetPosts(r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		writeHTTPError(w, r, h.Log, err)
+		return
 	}
 	tagCounts := h.GraphService.ComputeTagCounts(posts)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	authed := isAuthed(r)
-	return components.TagNoteGraph(components.TagNoteGraphProps{Posts: posts, TagCounts: tagCounts, Authed: authed}).Render(r.Context(), w)
-}
-
-// containsJSON performs a loose substring match allowing Accept headers with multiple types.
-// containsJSON retained only for potential future negotiation reuse (currently unused after split).
-func containsJSON(accept string) bool {
-	if accept == "" {
-		return false
+	if err := components.TagNoteGraph(components.TagNoteGraphProps{Posts: posts, TagCounts: tagCounts, Authed: authed}).Render(r.Context(), w); err != nil {
+		writeHTTPError(w, r, h.Log, err)
 	}
-	lower := strings.ToLower(accept)
-	return strings.Contains(lower, "application/json")
 }

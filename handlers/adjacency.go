@@ -3,11 +3,11 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 )
 
@@ -31,13 +31,15 @@ type adjacencyResponse struct {
 	Neighbors []services.AdjacentPost `json:"neighbors"`
 }
 
-func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.log, fmt.Errorf("GET method not allowed"))
+		return
 	}
 	slug := r.PathValue("id")
 	if slug == "" {
-		return httpx.BadRequest("missing slug", nil)
+		writeHTTPError(w, r, h.log, fmt.Errorf("missing slug"))
+		return
 	}
 	includeRaw := r.URL.Query().Get("includeTags")
 	includeTags := h.tagService.ParseSelectedTags(includeRaw)
@@ -59,16 +61,16 @@ func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) err
 	}
 	neighbors, err := services.ComputeAdjacency(h.postService, slug, includeSet, minShared, limit, r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		writeHTTPError(w, r, h.log, err)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	// Encode to buffer first to avoid sending 200 if encoding fails
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	if err := enc.Encode(adjacencyResponse{Slug: slug, Neighbors: neighbors}); err != nil {
-		return httpx.Internal(err)
+		writeHTTPError(w, r, h.log, Internal(err))
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
-	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/soockee/cybersocke.com/components"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
@@ -27,14 +26,16 @@ func NewHomeHandler(post *services.PostService, tags *services.TagService, log *
 	}
 }
 
-func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		return h.Post(w, r)
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed)
 	case http.MethodGet:
-		return h.Get(w, r)
+		if err := h.Get(w, r); err != nil {
+			writeHTTPError(w, r, h.Log, err)
+		}
 	default:
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed)
 	}
 }
 
@@ -43,7 +44,7 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	selected := h.tagService.ParseSelectedTags(r.URL.Query().Get("tags"))
 	posts, err := h.postService.GetPosts(ctx)
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	authed := isAuthed(r)
 	// Tag-centric view
@@ -71,12 +72,12 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	// Default starting post view
 	starting := h.postService.ChooseStartingPost(posts)
 	if starting == nil {
-		return httpx.NotFound("no posts available")
+		return NotFound("no posts available")
 	}
 	md := services.RenderMD(starting.Content)
 	neighbors, err := services.ComputeAdjacency(h.postService, starting.Meta.Slug, nil, 1, 12, ctx)
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	entries := make([]components.AdjacencyEntry, 0, len(neighbors))
 	for _, n := range neighbors {
@@ -116,7 +117,7 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *HomeHandler) Post(w http.ResponseWriter, r *http.Request) error {
-	return httpx.ErrMethodNotAllowed
+	return ErrMethodNotAllowed
 }
 
 // buildTagAdjacency constructs adjacency entries for posts intersecting with any of the selected tags.

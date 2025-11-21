@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,7 +13,6 @@ import (
 	"errors"
 
 	"github.com/soockee/cybersocke.com/components"
-	"github.com/soockee/cybersocke.com/internal/httpx"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
@@ -30,18 +29,24 @@ func NewPostHandler(postService *services.PostService, log *slog.Logger) *PostHa
 	}
 }
 
-func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
+func (h *PostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		return h.Post(w, r)
-	case http.MethodGet:
-		// Support fragment sub-path: /posts/{id}/fragment
-		if strings.HasSuffix(r.URL.Path, "/fragment") {
-			return h.Fragment(w, r)
+		if err := h.Post(w, r); err != nil {
+			writeHTTPError(w, r, h.Log, err)
 		}
-		return h.Get(w, r)
+	case http.MethodGet:
+		if strings.HasSuffix(r.URL.Path, "/fragment") {
+			if err := h.Fragment(w, r); err != nil {
+				writeHTTPError(w, r, h.Log, err)
+			}
+			return
+		}
+		if err := h.Get(w, r); err != nil {
+			writeHTTPError(w, r, h.Log, err)
+		}
 	default:
-		return httpx.ErrMethodNotAllowed
+		writeHTTPError(w, r, h.Log, ErrMethodNotAllowed)
 	}
 }
 
@@ -49,14 +54,14 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	idStr := r.PathValue("id")
 	post, err := h.postService.GetPost(idStr, r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	cleaned := services.StripDataview(post.Content)
 	md := services.RenderMD(cleaned)
 	// Build adjacency via service (include all tags, minShared=1, limit=12)
 	neighbors, err := services.ComputeAdjacency(h.postService, post.Meta.Slug, map[string]struct{}{}, 1, 12, r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	entries := make([]components.AdjacencyEntry, 0, len(neighbors))
 	for _, n := range neighbors {
@@ -106,18 +111,18 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		logger.Info("upload form file missing", slog.Any("err", err))
-		return httpx.BadRequest("invalid upload", err)
+		return BadRequest("invalid upload", err)
 	}
 	defer file.Close()
 
 	content, err := io.ReadAll(file)
 	if err != nil {
 		logger.Info("upload read failed", slog.Any("err", err))
-		return httpx.BadRequest("failed to read file", err)
+		return BadRequest("failed to read file", err)
 	}
 	if len(content) == 0 {
 		logger.Info("upload empty content")
-		return httpx.BadRequest("empty file", errors.New("empty file"))
+		return BadRequest("empty file", errors.New("empty file"))
 	}
 
 	original := filepath.Base(header.Filename)
@@ -126,14 +131,17 @@ func (h *PostHandler) Post(w http.ResponseWriter, r *http.Request) error {
 
 	if err := h.postService.CreatePost(content, original, r.Context()); err != nil {
 		logger.Error("create post failed", slog.String("slug", slug), slog.Any("err", err))
-		return httpx.Classify(err)
+		return err
 	}
 
 	logger.Info("upload stored", slog.String("slug", slug), slog.Duration("took", time.Since(start)))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write([]byte(fmt.Sprintf(`{"slug":%q}`, slug)))
-	return nil
+
+	err = json.NewEncoder(w).Encode(struct {
+		Slug string `json:"slug"`
+	}{Slug: slug})
+	return err
 }
 
 func (h *PostHandler) View(w http.ResponseWriter, r *http.Request, props components.PostViewProps) {
@@ -146,7 +154,7 @@ func (h *PostHandler) Fragment(w http.ResponseWriter, r *http.Request) error {
 	idStr := r.PathValue("id")
 	post, err := h.postService.GetPost(idStr, r.Context())
 	if err != nil {
-		return httpx.Classify(err)
+		return err
 	}
 	related, _ := h.postService.GetRelatedPosts(post.Meta.Slug, 12, r.Context()) // ignore classification for related fetch errors
 	// Render markdown for fragment (same as full post view)
