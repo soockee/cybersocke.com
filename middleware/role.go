@@ -25,7 +25,9 @@ func WithRole(required string, logger *slog.Logger) func(http.Handler) http.Hand
 				if logger != nil {
 					logger.Info("role check missing token", slog.String("required", required), slog.String("path", r.URL.Path), slog.String("method", r.Method))
 				}
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("unauthorized"))
 				return
 			}
 			if !hasRole(tok, required) {
@@ -33,7 +35,9 @@ func WithRole(required string, logger *slog.Logger) func(http.Handler) http.Hand
 					claimsSummary := summarizeRoleClaims(tok)
 					logger.Info("role check forbidden", slog.String("required", required), slog.String("uid", tok.UID), slog.String("claims", claimsSummary), slog.String("path", r.URL.Path), slog.String("method", r.Method))
 				}
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte("forbidden"))
 				return
 			}
 			if logger != nil {

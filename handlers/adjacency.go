@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -61,5 +62,13 @@ func (h *AdjacencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) err
 		return httpx.Classify(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(adjacencyResponse{Slug: slug, Neighbors: neighbors})
+	// Encode to buffer first to avoid sending 200 if encoding fails
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(adjacencyResponse{Slug: slug, Neighbors: neighbors}); err != nil {
+		return httpx.Internal(err)
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+	return nil
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -30,7 +31,13 @@ func (h *GraphAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) erro
 		return httpx.Classify(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
 	enc.SetIndent("", "  ")
-	return enc.Encode(graph)
+	if err := enc.Encode(graph); err != nil {
+		return httpx.Internal(err)
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+	return nil
 }

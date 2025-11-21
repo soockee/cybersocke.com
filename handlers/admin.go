@@ -36,6 +36,8 @@ func (h *AdminHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return httpx.Classify(err)
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	// Retrieve real CSRF token provided by gorilla/csrf middleware.
 	csrfToken := csrf.Token(r)
 	// Determine authentication from context (verified id token presence).

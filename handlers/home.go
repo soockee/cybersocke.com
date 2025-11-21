@@ -48,6 +48,8 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	authed := isAuthed(r)
 	// Tag-centric view
 	if len(selected) > 0 {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
 		domainEntries := services.ComputeTagAdjacency(posts, selected, 50)
 		entries := make([]components.AdjacencyEntry, 0, len(domainEntries))
 		for _, e := range domainEntries {
@@ -107,6 +109,8 @@ func (h *HomeHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		Aliases:     starting.Meta.Aliases,
 		TagFamilies: families,
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	components.ExplorerLayout(components.ExplorerLayoutProps{Post: props, Adjacency: entries, Tags: []string{}, Authed: authed}).Render(ctx, w)
 	return nil
 }

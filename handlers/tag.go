@@ -48,12 +48,14 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		return httpx.Classify(err)
 	}
 	if len(posts) == 0 {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("<div class=\"fragment-batch empty\" data-tag=\"" + tag + "\"><p>No posts for tag.</p></div>"))
+		_, _ = w.Write([]byte("<div class=\"fragment-batch empty\" data-tag=\"" + tag + "\"><p>No posts for tag.</p></div>"))
 		return nil
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
 	for _, p := range posts {
 		// Render markdown + build tag families for each fragment
 		clean := services.StripDataview(p.Content)
@@ -84,6 +86,6 @@ func (h *TagPostsHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		}
 		components.PostFragment(props).Render(r.Context(), w)
 	}
-	w.Write([]byte("</div>"))
+	_, _ = w.Write([]byte("</div>"))
 	return nil
 }

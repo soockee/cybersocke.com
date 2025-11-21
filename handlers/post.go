@@ -90,6 +90,8 @@ func (h *PostHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		TagFamilies: families,
 	}
 	authed := isAuthed(r)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	components.ExplorerLayout(components.ExplorerLayoutProps{Post: props, Adjacency: entries, Authed: authed}).Render(r.Context(), w)
 	return nil
 }
@@ -176,5 +178,6 @@ func (h *PostHandler) Fragment(w http.ResponseWriter, r *http.Request) error {
 		TagFamilies: families,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	return components.PostFragment(props).Render(r.Context(), w)
 }

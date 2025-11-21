@@ -37,6 +37,7 @@ func (h *GraphHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	}
 	tagCounts := h.GraphService.ComputeTagCounts(posts)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	authed := isAuthed(r)
 	return components.TagNoteGraph(components.TagNoteGraphProps{Posts: posts, TagCounts: tagCounts, Authed: authed}).Render(r.Context(), w)
 }

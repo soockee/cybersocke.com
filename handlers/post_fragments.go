@@ -49,13 +49,15 @@ func (h *PostFragmentsHandler) GetFragments(w http.ResponseWriter, r *http.Reque
 		return httpx.Classify(err)
 	}
 	if len(posts) == 0 {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("<div class=\"fragment-batch empty\" data-tag=\"" + tag + "\"><p>No posts for tag.</p></div>"))
+		_, _ = w.Write([]byte("<div class=\"fragment-batch empty\" data-tag=\"" + tag + "\"><p>No posts for tag.</p></div>"))
 		return nil
 	}
 	// Aggregate fragments. We intentionally avoid layout wrapper.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("<div class=\"fragment-batch\" data-tag=\"" + tag + "\">"))
 	for _, p := range posts {
 		clean := services.StripDataview(p.Content)
 		md := services.RenderMD(clean)
@@ -86,6 +88,6 @@ func (h *PostFragmentsHandler) GetFragments(w http.ResponseWriter, r *http.Reque
 		}
 		components.PostFragment(props).Render(ctx, w)
 	}
-	w.Write([]byte("</div>"))
+	_, _ = w.Write([]byte("</div>"))
 	return nil
 }

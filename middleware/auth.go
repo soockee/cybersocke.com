@@ -21,7 +21,9 @@ func WithAuthentication(authService *services.AuthService, sessionStore *session
 				if logger != nil {
 					logger.Error("auth session load failed", slog.String("path", r.URL.Path), slog.String("method", r.Method), slog.Any("err", err))
 				}
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte("internal server error"))
 				return
 			}
 			token, ok := s.Values["id_token"].(string)
@@ -29,7 +31,9 @@ func WithAuthentication(authService *services.AuthService, sessionStore *session
 				if logger != nil {
 					logger.Info("auth missing token", slog.String("path", r.URL.Path), slog.String("method", r.Method))
 				}
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("unauthorized"))
 				return
 			}
 			// Verify token
@@ -38,7 +42,9 @@ func WithAuthentication(authService *services.AuthService, sessionStore *session
 				if logger != nil {
 					logger.Info("auth token verify failed", slog.String("path", r.URL.Path), slog.String("method", r.Method), slog.Any("err", err))
 				}
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("unauthorized"))
 				return
 			}
 
