@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/soockee/cybersocke.com/compare/v1.11.0...v1.11.1) (2025-11-21)
+
+
+### Bug Fixes
+
+* auth callback http write ([#29](https://github.com/soockee/cybersocke.com/issues/29)) ([db44d5d](https://github.com/soockee/cybersocke.com/commit/db44d5d8e6b8f57d08ec09cd91b33d4fe10a3b1d))
+
 ## [1.11.0](https://github.com/soockee/cybersocke.com/compare/v1.10.0...v1.11.0) (2025-11-21)
 
 
