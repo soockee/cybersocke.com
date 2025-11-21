@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/soockee/cybersocke.com/compare/v1.10.0...v1.11.0) (2025-11-21)
+
+
+### Features
+
+* post and popup rendering ([#25](https://github.com/soockee/cybersocke.com/issues/25)) ([2e8df64](https://github.com/soockee/cybersocke.com/commit/2e8df6495d404f8455b2c65a11131a4db179fd23))
+
 ## [1.10.0](https://github.com/soockee/cybersocke.com/compare/v1.9.2...v1.10.0) (2025-11-21)
 
 
