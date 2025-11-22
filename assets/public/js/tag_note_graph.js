@@ -6,6 +6,11 @@
     const dataRoot = container.parentElement.querySelector('.tag-note-data');
     if(!dataRoot) return;
 
+    const initialFilterTags = (container.dataset.filterTags || '')
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
     const tagSpans = dataRoot.querySelectorAll('.tag-node');
     const noteSpans = dataRoot.querySelectorAll('.note-node');
     const elements = [];
@@ -29,6 +34,8 @@
       });
     });
 
+    const colors = window.getGraphThemeColors ? window.getGraphThemeColors() : {};
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const cy = cytoscape({
       container,
       elements,
@@ -74,18 +81,18 @@
           'font-size': 11,
           'text-wrap': 'wrap',
           'text-max-width': 90,
-          'color': '#000',
-          'background-color': '#000',
-          'border-color': '#000',
+          'color': colors.text,
+          'background-color': colors.node,
+          'border-color': colors.border,
           'border-width': 1,
           'text-background-opacity': 0,
           'shape': 'ellipse',
           'width': ele => 28 + (ele.data('weight') / (maxWeight || 1)) * 42,
           'height': ele => 28 + (ele.data('weight') / (maxWeight || 1)) * 42
         }},
-        { selector: 'node[type="tag"]', style: { 'background-color': '#16a34a' }},
-        { selector: 'edge', style: { 'line-color': '#444', 'curve-style': 'straight', 'width': 1.5 }},
-        { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#4a90e2' }}
+        { selector: 'node[type="tag"]', style: { 'background-color': colors.accent, 'color': isDark ? colors.textInvert : colors.text }},
+        { selector: 'edge', style: { 'line-color': colors.edge, 'curve-style': 'straight', 'width': 1.5 }},
+        { selector: 'node:selected', style: { 'border-width': 3, 'border-color': colors.accent }}
       ]
     });
 
@@ -98,12 +105,61 @@
         if(slug) window.location.href = '/posts/' + slug;
       } else if(type === 'tag') {
         const tag = n.data('label');
-        if(tag) window.location.href = '/?tags=' + encodeURIComponent(tag);
+        if(!tag) return;
+        const active = new Set(initialFilterTags);
+        const normalized = tag.trim();
+        if(active.has(normalized) && active.size === 1) {
+          return; // already focused on this single tag
+        }
+        active.add(normalized);
+        const next = Array.from(active).filter(Boolean).join(',');
+        const url = new URL('/graph', window.location.origin);
+        if(next) url.searchParams.set('includeTags', next);
+        window.location.href = url.toString();
       }
     });
 
     cy.on('layoutstop', () => cy.fit(undefined, 40));
     cy.fit(undefined, 40);
+
+    function applyTheme(e){
+      const c = window.getGraphThemeColors ? window.getGraphThemeColors() : colors;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      cy.style()
+        .selector('node')
+        .style({
+          'background-color': c.node,
+          'border-color': c.border,
+          'color': c.text
+        })
+        .selector('node[type="tag"]')
+        .style({
+          'background-color': c.accent,
+          'color': dark ? c.textInvert : c.text
+        })
+        .selector('edge')
+        .style({ 'line-color': c.edge })
+        .selector('node:selected')
+        .style({ 'border-color': c.accent })
+        .update();
+    }
+    document.addEventListener('themechange', applyTheme);
+
+    // ResizeObserver: ensure graph refits when container size changes
+    let ro; let resizeFrame;
+    function refit(){
+      if(resizeFrame) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        try { cy.resize(); cy.fit(undefined, 40); } catch(e) {}
+      });
+    }
+    if('ResizeObserver' in window){
+      ro = new ResizeObserver(refit);
+      ro.observe(container);
+    } else {
+      window.addEventListener('resize', refit);
+    }
+    window.addEventListener('beforeunload', () => { if(ro) ro.disconnect(); });
   }
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
 })();

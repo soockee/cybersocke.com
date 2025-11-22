@@ -1,0 +1,68 @@
+version: 2
+fields:
+  - name: name
+    type: string
+    required: true
+    description: Display title; derived from slug if omitted.
+  - name: lead
+    type: string
+    required: true
+    maxLength: 240
+    singleLine: true
+    description: Short single-line summary (<=240 chars).
+  - name: created
+    type: date
+    required: true
+    format: YYYY-MM-DD
+    description: Original creation date.
+  - name: updated
+    type: datetime
+    required: true
+    formatsAllowed:
+      - RFC3339
+      - YYYY-MM-DD
+      - YYYY-MM-DDTHH:MM
+      - YYYY-MM-DD HH:MM
+    description: Last significant update timestamp.
+  - name: published
+    type: boolean
+    required: true
+    description: Publication status; must be true or false.
+  - name: tags
+    type: array[string]
+    required: true
+    description: Classified taxonomy tags with family prefixes.
+tagFamilies:
+  type:
+    min: 1
+    max: 2
+    description: Primary content type(s).
+  role:
+    min: 0
+    max: 3
+    description: Role(s) played by the content.
+  structure:
+    min: 0
+    max: 1
+    description: Structural classification.
+  source:
+    min: 0
+    max: 1
+    description: Source origin indicator.
+  theme:
+    min: 1
+    max: 5
+    description: Topical themes.
+  target:
+    min: 0
+    max: 999
+    description: Target audiences (unrestricted upper bound for now).
+migrations:
+  - from: 1
+    to: 2
+    steps:
+      - op: removeField
+        field: aliases
+      - op: setField
+        field: schema_version
+        value: "2"

@@ -1,0 +1,660 @@
+basePath: /api
+definitions:
+  htmlhandler.SessionRequest:
+    properties:
+      idToken:
+        type: string
+    type: object
+  jsonhandler.PostSummary:
+    properties:
+      lead:
+        type: string
+      slug:
+        type: string
+      title:
+        type: string
+      updated:
+        type: string
+    type: object
+  jsonhandler.PostsAPIResponse:
+    properties:
+      hasMore:
+        type: boolean
+      page:
+        type: integer
+      posts:
+        items:
+          $ref: '#/definitions/jsonhandler.PostSummary'
+        type: array
+    type: object
+  jsonhandler.adjacencyResponse:
+    properties:
+      neighbors:
+        items:
+          $ref: '#/definitions/services.AdjacentPost'
+        type: array
+      slug:
+        type: string
+    type: object
+  services.AdjacentPost:
+    properties:
+      date:
+        type: string
+      name:
+        type: string
+      shared_tags:
+        items:
+          type: string
+        type: array
+      slug:
+        type: string
+      weight:
+        type: integer
+    type: object
+host: cybersocke.com
+info:
+  contact: {}
+  description: HTTP JSON API for cybersocke.com posts, tags, and graphs.
+  title: Cybersocke API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Redirects visitors hitting the root path to the /posts listing.
+      produces:
+      - text/html
+      responses:
+        "302":
+          description: Redirect to /posts
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Root redirect to posts grid
+      tags:
+      - public
+  /admin:
+    get:
+      description: Renders the admin console for managing posts and uploads (requires
+        authentication + CSRF token).
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Admin dashboard
+      tags:
+      - admin
+  /admin/posts/{slug}/delete:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Deletes the specified post and returns a JSON confirmation.
+      parameters:
+      - description: Post slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deletion confirmation
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Post not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a post
+      tags:
+      - admin
+  /admin/posts/{slug}/edit:
+    get:
+      description: Renders the HTML editor for a post along with schema and CSRF token.
+      parameters:
+      - description: Post slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Post not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Edit post form
+      tags:
+      - admin
+    post:
+      consumes:
+      - text/plain
+      description: Accepts the raw markdown payload and updates the post, redirecting
+        back to /admin on success.
+      parameters:
+      - description: Post slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      - description: Raw markdown + frontmatter
+        in: body
+        name: body
+        required: true
+        schema:
+          type: string
+      produces:
+      - text/html
+      responses:
+        "303":
+          description: Redirect to /admin
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a post
+      tags:
+      - admin
+  /api/graph:
+    get:
+      description: Returns a weighted graph of posts and tags, filtered by optional
+        query parameters.
+      parameters:
+      - description: Minimum shared tags between posts
+        in: query
+        name: minSharedTags
+        type: integer
+      - description: Comma-separated list of tags to include
+        in: query
+        name: includeTags
+        type: string
+      - description: Maximum number of edges to include
+        in: query
+        name: maxEdges
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Graph JSON structure
+          schema: {}
+        "400":
+          description: Bad request or invalid parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get posts/tag graph
+      tags:
+      - graph
+  /api/posts:
+    get:
+      description: Returns a paginated list of published posts, ordered by updated
+        date descending.
+      parameters:
+      - description: Page number (1-based, default 1)
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/jsonhandler.PostsAPIResponse'
+        "400":
+          description: Bad request or invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List published posts
+      tags:
+      - posts
+  /api/posts/{id}/adjacency:
+    get:
+      description: Returns weighted neighboring posts for a given post slug based
+        on shared tags.
+      parameters:
+      - description: Post slug
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comma-separated list of tags to restrict adjacency calculation
+        in: query
+        name: includeTags
+        type: string
+      - description: Minimum number of shared tags (default 1)
+        in: query
+        name: minShared
+        type: integer
+      - description: Maximum number of neighbors to return (default 12)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/jsonhandler.adjacencyResponse'
+        "400":
+          description: Bad request or missing slug
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get adjacent posts
+      tags:
+      - posts
+  /auth:
+    get:
+      description: Renders the Firebase-based login page for administrators.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login page
+      tags:
+      - auth
+  /auth/google/callback:
+    post:
+      consumes:
+      - application/json
+      description: Accepts the ID token from the client and persists it into the session
+        cookie.
+      parameters:
+      - description: Session payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/htmlhandler.SessionRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Store Firebase ID token
+      tags:
+      - auth
+  /auth/logout:
+    get:
+      description: Clears the session cookie and redirects to the public homepage.
+      produces:
+      - text/html
+      responses:
+        "303":
+          description: Redirect to /
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout current user
+      tags:
+      - auth
+  /graph:
+    get:
+      description: Renders the interactive tag-note graph visualization for published
+        posts.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Graph explorer page
+      tags:
+      - graph
+  /posts:
+    get:
+      description: Renders the HTML grid listing of published posts ordered by most
+        recently updated.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "405":
+          description: Method not allowed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Posts overview grid
+      tags:
+      - public
+  /posts/{id}:
+    get:
+      description: Renders the full HTML explorer layout for a single blog post, including
+        adjacency metadata.
+      parameters:
+      - description: Post identifier or slug
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "404":
+          description: Post not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: View a blog post
+      tags:
+      - public
+  /posts/{id}/fragment:
+    get:
+      description: Returns a lightweight HTML snippet for overlay navigation (without
+        layout) for a post.
+      parameters:
+      - description: Post identifier or slug
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment
+          schema:
+            type: string
+        "404":
+          description: Post not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get post fragment HTML
+      tags:
+      - public
+  /posts/fragments:
+    get:
+      description: Returns a batch of HTML fragments for posts matching a given tag.
+      parameters:
+      - description: Tag identifier
+        in: query
+        name: tag
+        required: true
+        type: string
+      - description: Maximum number of fragments to return (default 5)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragment batch
+          schema:
+            type: string
+        "400":
+          description: Missing tag query
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No posts found for tag
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Fetch post fragments by tag
+      tags:
+      - public
+  /profile:
+    get:
+      description: Renders a read-only profile sourced from the verified session ID
+        token.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML page
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User profile page
+      tags:
+      - auth
+  /tags/{tag}/posts:
+    get:
+      description: Returns HTML fragments for posts containing the given tag.
+      parameters:
+      - description: Tag identifier
+        in: path
+        name: tag
+        required: true
+        type: string
+      - description: Maximum posts to return (default 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML fragments
+          schema:
+            type: string
+        "400":
+          description: Missing tag
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: No posts found for tag
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Fetch posts for a tag
+      tags:
+      - public
+schemes:
+- https
+- http
+swagger: "2.0"

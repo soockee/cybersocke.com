@@ -47,6 +47,10 @@
   document.addEventListener('click', function(e){
     const card = e.target.closest('.postcard a');
     if(card && card.getAttribute('href').startsWith('/posts/')){
+      // Allow normal navigation for cards inside the public posts grid (no fragment overlay there)
+      if (card.closest('.posts-grid')) {
+        return; // let the browser follow the link
+      }
       const slug = card.getAttribute('href').replace('/posts/','');
       e.preventDefault();
       openSlug(slug);

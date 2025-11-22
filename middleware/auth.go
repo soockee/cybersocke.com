@@ -15,9 +15,17 @@ import (
 func WithAuthentication(authService *services.AuthService, sessionStore *sessions.CookieStore, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if tok, ok := session.TokenFromContext(r.Context()); ok && tok != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
 			// Load session first
-			s, err := sessionStore.Get(r, "cybersocke-session")
-			if err != nil {
+			s := GetSession(r)
+			var err error
+			if s == nil {
+				s, err = sessionStore.Get(r, "cybersocke-session")
+			}
+			if err != nil || s == nil {
 				if logger != nil {
 					logger.Error("auth session load failed", slog.String("path", r.URL.Path), slog.String("method", r.Method), slog.Any("err", err))
 				}
@@ -53,6 +61,42 @@ func WithAuthentication(authService *services.AuthService, sessionStore *session
 				logger.Debug("auth token verified", slog.String("uid", verified_token.UID), slog.String("path", r.URL.Path), slog.String("method", r.Method))
 			}
 
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// WithOptionalAuthentication attempts to verify an ID token if it exists in the session without enforcing authentication.
+// It enables downstream handlers and templates to access user context on public routes.
+func WithOptionalAuthentication(authService *services.AuthService, logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if tok, ok := session.TokenFromContext(r.Context()); ok && tok != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			sess := GetSession(r)
+			if sess == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			raw, ok := sess.Values["id_token"].(string)
+			if !ok || raw == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			verified, err := authService.Verify(raw, r.Context())
+			if err != nil {
+				if logger != nil {
+					logger.Debug("optional auth verify failed", slog.String("path", r.URL.Path), slog.String("method", r.Method), slog.Any("err", err))
+				}
+				next.ServeHTTP(w, r)
+				return
+			}
+			ctx := context.WithValue(r.Context(), session.IdTokenKey, verified)
+			if logger != nil {
+				logger.Debug("optional auth token verified", slog.String("uid", verified.UID), slog.String("path", r.URL.Path))
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

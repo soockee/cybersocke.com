@@ -1,10 +1,10 @@
 package services
 
-import "github.com/soockee/cybersocke.com/storage"
+import "github.com/soockee/cybersocke.com/storage/models"
 
 // CollectThemeTags builds a distinct tag slice for admin filtering and navigation.
 // Domain-level helper; kept in services to allow reuse beyond handlers.
-func CollectThemeTags(posts map[string]*storage.Post) []string {
+func CollectThemeTags(posts map[string]*models.Post) []string {
 	uniq := make(map[string]struct{})
 	for _, p := range posts {
 		for _, t := range p.Meta.Tags {

@@ -1,34 +1,83 @@
 package components
 
-import "github.com/soockee/cybersocke.com/storage"
+import (
+	"github.com/soockee/cybersocke.com/storage/models"
+	"strconv"
+)
 
 type AdminViewProps struct {
-	Posts     map[string]*storage.Post
+	Posts     map[string]*models.Post
 	CSRFToken string
 	Authed    bool
 	ThemeTags []string
+	User      *NavUser
 }
 
 templ Admin(props AdminViewProps) {
-	@layout("Admin", GetNavItems(props.Authed)) {
-		<div class="admin-columns">
-			<div class="posts-navigator" data-mode="graph-nav">
-				for _, post := range  storage.SortPostMap(props.Posts) {
-					// Each card clickable; JS intercepts to open overlay
-					@PostCard(PostCardProps{
-						Title:       post.Meta.Name,
-						Description: post.Meta.Lead,
-						Slug:        post.Meta.Slug,
-						Date:        post.Meta.Updated,
-						Tags:        post.Meta.Tags,
-					})
-				}
-				if props.Authed {
+	@layout("Admin", BuildNavProps(props.Authed, props.User)) {
+		<div class="admin-container">
+			if props.Authed {
+				<div class="admin-upload-section">
 					@UploadBox(props.CSRFToken)
+				</div>
+			}
+			<div class="admin-posts-section">
+				<h2>All Posts</h2>
+				if len(props.Posts) == 0 {
+					<p>No posts available.</p>
+				} else {
+					<table class="admin-posts-table" id="admin-posts-table" data-csrf={ props.CSRFToken }>
+						<thead>
+							<tr>
+								<th data-sort-key="title" role="columnheader" aria-sort="none">Title</th>
+								<th data-sort-key="slug" role="columnheader" aria-sort="none">Slug</th>
+								<th data-sort-key="updated" role="columnheader" aria-sort="none">Updated</th>
+								<th data-sort-key="published" role="columnheader" aria-sort="none">Published</th>
+								<th data-sort-key="tags" role="columnheader" aria-sort="none">Tags</th>
+								<th data-sort-key="leadLength" role="columnheader" aria-sort="none">Lead Length</th>
+								<th role="columnheader">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, post := range models.SortPostMap(props.Posts) {
+								<tr data-slug={ post.Meta.Slug } data-updated={ post.Meta.Updated.Format("2006-01-02T15:04:05Z07:00") } data-published={ boolToString(post.Meta.Published) } data-tags-count={ intToString(len(post.Meta.Tags)) } data-lead-length={ intToString(len(post.Meta.Lead)) }>
+									<td>
+										<a href={ templ.URL("/posts/" + post.Meta.Slug) }>{ post.Meta.Name }</a>
+									</td>
+									<td class="slug-cell">{ post.Meta.Slug }</td>
+									<td>{ post.Meta.Updated.Format("2006-01-02") }</td>
+									<td>
+										if post.Meta.Published {
+											<span class="badge badge-published">Yes</span>
+										} else {
+											<span class="badge badge-draft">No</span>
+										}
+									</td>
+									<td>{ intToString(len(post.Meta.Tags)) }</td>
+									<td>{ intToString(len(post.Meta.Lead)) }</td>
+									<td class="actions-cell">
+										<a class="action-btn edit" href={ templ.URL("/admin/posts/" + post.Meta.Slug + "/edit") }>Edit</a>
+										<button type="button" class="action-btn delete" data-action="delete" data-slug={ post.Meta.Slug }>Delete</button>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
 				}
-				<!-- Overlay container depth indicator; navigator.js manages layers -->
-				<div id="overlay-root"></div>
 			</div>
 		</div>
+		<script src="/assets/js/admin_sort.js"></script>
+		<script src="/assets/js/admin_actions.js" type="module"></script>
 	}
+}
+
+func boolToString(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+func intToString(i int) string {
+	return strconv.Itoa(i)
 }

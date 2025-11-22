@@ -22,19 +22,24 @@ type AdjacencyPanelProps struct {
 // AdjacencyPanel renders a sidebar list of neighboring posts ranked by weight.
 templ AdjacencyPanel(p AdjacencyPanelProps) {
 	<aside class="adjacency-panel" aria-label="Adjacent posts">
-		<h2>Adjacent</h2>
+		<div class="adjacency-header">
+			<h2 style="margin:0;">Adjacent</h2>
+			<small class="adjacency-hint">Posts sharing tags with the current post</small>
+		</div>
 		if len(p.Entries) == 0 {
 			<p class="empty">No adjacent posts</p>
 		}
 		if len(p.Entries) > 0 {
-			<ul>
+			<ul class="adjacency-list">
 				for _, e := range p.Entries {
-					<li>
-						<a href={ templ.URL("/posts/" + e.Slug) } data-slug={ e.Slug } title={ "Shared tags: " + strings.Join(e.SharedTags, ", ") }>{ e.Name }</a>
-						<span class="adj-weight" aria-label={ "shared tags count" }>{ e.Weight }</span>
-						<div class="shared-tags">
+					<li class="adjacency-item">
+						<div class="adjacency-item-main">
+							<a class="adj-post-link" href={ templ.URL("/posts/" + e.Slug) } data-slug={ e.Slug } title={ "Shared tags: " + strings.Join(e.SharedTags, ", ") }>{ e.Name }</a>
+							<span class="adj-weight" aria-label={ "shared tags count" } title="Shared tag weight">{ e.Weight }</span>
+						</div>
+						<div class="shared-tags" aria-label="Shared tags">
 							for i, t := range e.SharedTags {
-								<span class="tag" data-tag={ t }>{ t }</span>
+								<a class="tag tag-clickable" data-tag={ t } href={ templ.URL("/graph?includeTags=" + t) } title={ "Explore tag graph for " + t }>{ t }</a>
 								if i < len(e.SharedTags)-1 {
 									<span class="sep">·</span>
 								}

@@ -1,24 +1,23 @@
 package components
 
-
-type NavItem struct{
-    Name string
-    URL string
+type NavItem struct {
+	Name string
+	URL  string
 }
 
-func NewNavItem(name string, URL string) NavItem{
-    return NavItem{
-        Name: name,
-        URL: URL,
-    }
+func NewNavItem(name string, URL string) NavItem {
+	return NavItem{
+		Name: name,
+		URL:  URL,
+	}
 }
 
-templ layout(name string, navitems []NavItem) {
+templ layout(name string, navprops NavBarProps) {
 	<!DOCTYPE html>
 	<html lang="en">
 		@Header(name)
 		<body>
-			@navTemplate(navitems)
+			@navTemplate(navprops)
 			<main>
 				{ children... }
 			</main>

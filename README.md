@@ -77,6 +77,43 @@ LOCAL_DEV=false
 After exporting your environment, run the server (for example `go run .` from the repository root) and it will fail fast with a clear error if any required config is missing. The error lists the missing variables.
 
 If you intend to run the `set_firebase_claims` utility, ensure the `FIREBASE_IMPERSONATE_SERVICE_ACCOUNT` and `GCP_PROJECT_ID` variables are set in your environment.
+
+## Schema Management
+
+The application uses a post contract schema (`schema/post_contract.yaml`) that defines frontmatter field rules, tag family constraints, and migrations. 
+
+### Remote-First Schema Loading
+
+On startup, the application:
+1. Attempts to load the schema from GCS (`schema/post_contract.yaml` in the configured bucket)
+2. Falls back to the local filesystem schema if remote fetch fails (auth/network errors)
+3. Logs the schema source (`remote` or `local`), version, and hash
+
+This remote-first approach ensures all environments use the same schema version once deployed.
+
+### Schema Versioning & Sync
+
+The schema is automatically synced to GCS on each release:
+
+1. The GitHub Actions workflow (`.github/workflows/build-and-publish.yaml`) runs on version tags (`v*`)
+2. After building the Docker image, a separate `sync-schema` job:
+   - Authenticates via Workload Identity Federation to `schema-manager@dz-cybersocke02.iam.gserviceaccount.com`
+   - Compares local schema version/hash with remote `schema/post_contract.yaml`
+   - Uploads only if the version or hash differs
+   - GCS object versioning provides automatic history tracking
+
+### Migration Tool
+
+Use `cmd/contract_migrate` to apply schema migrations to existing posts and persist a new schema:
+
+```bash
+go run ./cmd/contract_migrate \
+  --bucket my-blog-bucket \
+  --schema schema/post_contract.yaml \
+  [--dry]
+```
+
+See `cmd/contract_migrate/README.md` for detailed usage.
  
 ## Tag-Based Navigation & Content Graph
 

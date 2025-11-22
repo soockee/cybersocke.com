@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/soockee/cybersocke.com/storage"
+	"github.com/soockee/cybersocke.com/storage/models"
 )
 
 // AdjacentPost represents a neighboring post with shared tag weights.
@@ -73,7 +73,7 @@ func ComputeAdjacency(posts *PostService, slug string, includeSet map[string]str
 // ComputeTagAdjacency builds adjacency entries for a tag-centric view. It returns posts that match
 // at least one selected tag. Weight = number of selected tags the post contains. Duplicates within
 // a single post are ignored. Result is ranked weight desc, date desc, slug asc and capped by limit (>0).
-func ComputeTagAdjacency(all map[string]*storage.Post, selected []string, limit int) []AdjacentPost {
+func ComputeTagAdjacency(all map[string]*models.Post, selected []string, limit int) []AdjacentPost {
 	// Fast path: empty selection
 	if len(selected) == 0 {
 		return []AdjacentPost{}

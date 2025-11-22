@@ -8,6 +8,8 @@ COPY . .
 
 
 RUN go install github.com/a-h/templ/cmd/templ@latest && templ generate
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+RUN swag init --generalInfo ./api.go --output ./docs --parseInternal
 
 # Build the Go binary for the desired architecture (amd64 in this case)
 RUN CGO_ENABLED=0 go build -o myapp

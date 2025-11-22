@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/soockee/cybersocke.com/storage"
+	"github.com/soockee/cybersocke.com/storage/models"
 )
 
 type TagService struct{}
@@ -34,7 +34,7 @@ func (ts *TagService) ParseSelectedTags(raw string) []string {
 
 // BuildSummary computes tag frequency, ordering, and suggested co-occurring tags
 // based on the provided posts and currently selected tag filters.
-func (ts *TagService) BuildSummary(posts map[string]*storage.Post, selected []string) TagSummary {
+func (ts *TagService) BuildSummary(posts map[string]*models.Post, selected []string) TagSummary {
 	counts := map[string]int{}
 	for _, p := range posts {
 		for _, t := range p.Meta.Tags {
@@ -108,7 +108,7 @@ func includesAll(tags []string, selected []string) bool {
 // ListFamilyTags returns the unique tags under a given family prefix (e.g. "theme").
 // For family "theme" this will return tags like: theme/observability, theme/platform
 // Ordering is lexicographic for stable UI grouping.
-func (ts *TagService) ListFamilyTags(posts map[string]*storage.Post, family string) []string {
+func (ts *TagService) ListFamilyTags(posts map[string]*models.Post, family string) []string {
 	family = strings.TrimSpace(family)
 	if family == "" {
 		return []string{}

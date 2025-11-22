@@ -2,78 +2,64 @@ package storage
 
 import (
 	"context"
-	"maps"
 	"net/http"
-	"slices"
-	"strings"
-	"time"
+
+	"github.com/soockee/cybersocke.com/storage/models"
 )
 
-type Storage interface {
-	GetPost(slug string, ctx context.Context) (*Post, error)
-	GetPosts(ctx context.Context) (map[string]*Post, error)
-	GetPostsByTags(ctx context.Context, tags []string, matchAll bool) ([]*Post, error)
-	GetRelatedPosts(ctx context.Context, slug string, limit int) ([]*Post, error)
-	GetAbout() []byte
-	GetAssets() http.Handler
+// NOTE: Directly depend on models package; legacy re-exports removed.
 
+// ContentStore defines pure persistence operations for dynamic post content only
+// (no tag indexing, validation, graph logic, or static asset concerns). Implementations
+// are responsible for raw CRUD and optional caching of posts. Static assets and
+// about page content are now handled by a distinct AssetStore.
+type ContentStore interface {
+	// GetPost retrieves a single post by slug.
+	GetPost(slug string, ctx context.Context) (*models.Post, error)
+	// GetPosts returns all posts as a map keyed by slug.
+	GetPosts(ctx context.Context) (map[string]*models.Post, error)
+	// GetRaw returns the raw markdown bytes (frontmatter + body) for editing.
+	GetRaw(slug string, ctx context.Context) ([]byte, error)
+	// CreatePost persists a new post from raw markdown bytes.
 	CreatePost(data []byte, originalFilename string, ctx context.Context) error
+	// UpdatePost replaces the entire raw markdown content of an existing post.
+	UpdatePost(slug string, data []byte, ctx context.Context) error
+	// DeletePost removes a post completely.
+	DeletePost(slug string, ctx context.Context) error
 }
 
-type PostMeta struct {
-	Name         string    `yaml:"name"`
-	Slug         string    `yaml:"slug"` // derived from filename; frontmatter value ignored on upload
-	Tags         []string  `yaml:"tags"`
-	Aliases      []string  `yaml:"aliases"`
-	Lead         string    `yaml:"lead"`      // short summary (can substitute description)
-	CreatedRaw   string    `yaml:"created"`   // raw created date (YYYY-MM-DD) from frontmatter
-	Created      time.Time `yaml:"-"`         // parsed created date (strict date only)
-	UpdatedRaw   string    `yaml:"updated"`   // raw timestamp string from frontmatter (flexible formats)
-	Updated      time.Time `yaml:"-"`         // parsed canonical time (set during validation / parse)
-	PublishedRaw string    `yaml:"published"` // raw published value (string/bool); parsed in validation
-	Published    bool      `yaml:"-"`         // parsed boolean
+// AssetStore provides read-only access to static public assets and optional
+// auxiliary content pages (e.g. About). Mutation operations are intentionally
+// excluded; dynamic content belongs in a ContentStore implementation.
+type AssetStore interface {
+	// GetAssets returns an HTTP handler that serves static files.
+	GetAssets() http.Handler
 }
 
-type Post struct {
-	Meta    PostMeta
-	Content []byte
+// SchemaStore defines operations for reading/writing post contract schema.
+// Separated from ContentStore to allow independent schema management.
+type SchemaStore interface {
+	// GetSchema retrieves the current post contract schema (YAML).
+	GetSchema(ctx context.Context) ([]byte, error)
+	// PutSchema writes/updates the post contract schema.
+	PutSchema(ctx context.Context, data []byte) error
 }
 
-func SortPostMap(posts map[string]*Post) []*Post {
-	it := maps.Values(posts)
-	s := []*Post{}
-	for post := range it {
-		s = append(s, post)
-	}
-	return SortPostsByDate(s)
+// PostQueryStore defines tag/graph-aware read-only querying operations separated from
+// the core ContentStore CRUD. Implementations may maintain in-memory indexes or graphs.
+// This separation allows simpler testing of CRUD vs derived queries independently.
+type PostQueryStore interface {
+	// GetPostsByTags returns posts matching ANY or ALL provided tags.
+	GetPostsByTags(ctx context.Context, tags []string, matchAll bool) ([]*models.Post, error)
+	// GetRelatedPosts returns posts related to a slug ranked by shared tags.
+	GetRelatedPosts(ctx context.Context, slug string, limit int) ([]*models.Post, error)
 }
 
-func SortPostsByDate(posts []*Post) []*Post {
-	// Sort in descending order (newest first)
-	slices.SortFunc(posts, func(a, b *Post) int {
-		if a.Meta.Updated.After(b.Meta.Updated) {
-			return -1 // a is newer, comes first
-		} else if a.Meta.Updated.Before(b.Meta.Updated) {
-			return 1 // b is newer, comes first
-		}
-		return 0 // Dates are equal
-	})
-	return posts
-}
-
-// DeriveDisplayName builds a human-friendly Title Case name from a slug that includes `.md`.
-// Example: "my-first-post.md" -> "My First Post".
-// Hyphens become spaces; each segment capitalized (first rune upper, rest unchanged).
-func DeriveDisplayName(slug string) string {
-	if slug == "" {
-		return ""
-	}
-	base := strings.TrimSuffix(slug, ".md")
-	parts := strings.Split(base, "-")
-	for i, p := range parts {
-		if len(p) > 0 {
-			parts[i] = strings.ToUpper(p[:1]) + p[1:]
-		}
-	}
-	return strings.Join(parts, " ")
-}
+// Compile-time assertions (kept near interface declarations for clarity).
+// Concrete types are expected to satisfy these; failure surfaces during build.
+var (
+	_ ContentStore   = (*GCSStore)(nil)
+	_ PostQueryStore = (*GCSStore)(nil)
+	_ AssetStore     = (*AssetsStore)(nil)
+	_ SchemaStore    = (*GCSStore)(nil)
+)

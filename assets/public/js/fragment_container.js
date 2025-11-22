@@ -106,6 +106,33 @@
       document.body.classList.remove('no-select');
     });
 
+    // Touch drag support
+    header.addEventListener('touchstart', (e) => {
+      if (e.target.tagName === 'BUTTON') return;
+      const t = e.touches[0];
+      if (!t) return;
+      drag = { startX: t.clientX, startY: t.clientY, origX: container.offsetLeft, origY: container.offsetTop, touch: true };
+      document.body.classList.add('no-select');
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+      if (!drag || !drag.touch) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - drag.startX;
+      const dy = t.clientY - drag.startY;
+      container.style.left = drag.origX + dx + 'px';
+      container.style.top = drag.origY + dy + 'px';
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', () => {
+      if (drag && drag.touch) {
+        drag = null;
+        document.body.classList.remove('no-select');
+        persist(container);
+      }
+    });
+
     collapseBtn.addEventListener('click', () => {
       const collapsed = container.dataset.collapsed === 'true';
       if (!collapsed) {
@@ -138,6 +165,7 @@
     persist(container);
     container.addEventListener('mouseup', () => persist(container)); // resize end
     window.addEventListener('mouseup', () => persist(container)); // drag end
+    window.addEventListener('touchend', () => persist(container)); // touch drag end
     return container;
   }
 

@@ -8,22 +8,23 @@ import (
 
 	"github.com/soockee/cybersocke.com/session"
 	"github.com/soockee/cybersocke.com/storage"
+	"github.com/soockee/cybersocke.com/storage/models"
 )
 
 type PostService struct {
 	authService *AuthService
-	store       storage.Storage
+	content     storage.ContentStore
+	query       storage.PostQueryStore
 }
 
-func NewPostService(store storage.Storage, authService *AuthService) *PostService {
-	return &PostService{
-		authService: authService,
-		store:       store,
-	}
+// NewPostService composes separate stores for CRUD (content) and derived tag/graph queries (query).
+// In simple deployments both may be fulfilled by the same concrete type (e.g. *storage.GCSStore).
+func NewPostService(content storage.ContentStore, query storage.PostQueryStore, authService *AuthService) *PostService {
+	return &PostService{authService: authService, content: content, query: query}
 }
 
-func (s *PostService) GetPost(slug string, ctx context.Context) (*storage.Post, error) {
-	post, err := s.store.GetPost(slug, ctx)
+func (s *PostService) GetPost(slug string, ctx context.Context) (*models.Post, error) {
+	post, err := s.content.GetPost(slug, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -39,15 +40,15 @@ func (s *PostService) GetPost(slug string, ctx context.Context) (*storage.Post, 
 	return post, nil
 }
 
-func (s *PostService) GetPosts(ctx context.Context) (map[string]*storage.Post, error) {
-	all, err := s.store.GetPosts(ctx)
+func (s *PostService) GetPosts(ctx context.Context) (map[string]*models.Post, error) {
+	all, err := s.content.GetPosts(ctx)
 	if err != nil {
 		return nil, err
 	}
 	// Filter unpublished unless authenticated
 	authed := ctx.Value(session.IdTokenKey) != nil
 	if !authed {
-		filtered := make(map[string]*storage.Post)
+		filtered := make(map[string]*models.Post)
 		for slug, p := range all {
 			if p.Meta.Published {
 				filtered[slug] = p
@@ -60,16 +61,16 @@ func (s *PostService) GetPosts(ctx context.Context) (map[string]*storage.Post, e
 
 // GetPostsByTag returns posts containing the tag ordered by date desc (slug asc tie-breaker).
 // limit <= 0 means no cap. Returns an empty slice if tag is empty.
-func (s *PostService) GetPostsByTag(tag string, limit int, ctx context.Context) ([]*storage.Post, error) {
+func (s *PostService) GetPostsByTag(tag string, limit int, ctx context.Context) ([]*models.Post, error) {
 	if tag == "" {
-		return []*storage.Post{}, nil
+		return []*models.Post{}, nil
 	}
-	all, err := s.store.GetPosts(ctx)
+	all, err := s.content.GetPosts(ctx)
 	if err != nil {
 		return nil, err
 	}
 	authed := ctx.Value(session.IdTokenKey) != nil
-	out := make([]*storage.Post, 0)
+	out := make([]*models.Post, 0)
 	for _, p := range all {
 		if !authed && !p.Meta.Published {
 			continue
@@ -98,16 +99,16 @@ func (s *PostService) GetPostsByTag(tag string, limit int, ctx context.Context) 
 
 // GetPostsByTags returns posts matching ALL provided tags (if all=true) or ANY if all=false.
 // If tags is empty, returns all posts.
-func (s *PostService) GetPostsByTags(tags []string, all bool, ctx context.Context) (map[string]*storage.Post, error) {
+func (s *PostService) GetPostsByTags(tags []string, all bool, ctx context.Context) (map[string]*models.Post, error) {
 	if len(tags) == 0 {
 		return s.GetPosts(ctx)
 	}
-	posts, err := s.store.GetPostsByTags(ctx, tags, all)
+	posts, err := s.query.GetPostsByTags(ctx, tags, all)
 	if err != nil {
 		return nil, err
 	}
 	// Convert slice to map to align with existing HomeViewProps expectations.
-	result := make(map[string]*storage.Post, len(posts))
+	result := make(map[string]*models.Post, len(posts))
 	authed := ctx.Value(session.IdTokenKey) != nil
 	for _, p := range posts {
 		if !authed && !p.Meta.Published {
@@ -119,8 +120,8 @@ func (s *PostService) GetPostsByTags(tags []string, all bool, ctx context.Contex
 }
 
 // GetRelatedPosts returns related posts for a given slug, ranked by shared tags.
-func (s *PostService) GetRelatedPosts(slug string, limit int, ctx context.Context) ([]*storage.Post, error) {
-	posts, err := s.store.GetRelatedPosts(ctx, slug, limit)
+func (s *PostService) GetRelatedPosts(slug string, limit int, ctx context.Context) ([]*models.Post, error) {
+	posts, err := s.query.GetRelatedPosts(ctx, slug, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func (s *PostService) GetRelatedPosts(slug string, limit int, ctx context.Contex
 	if authed {
 		return posts, nil
 	}
-	filtered := make([]*storage.Post, 0, len(posts))
+	filtered := make([]*models.Post, 0, len(posts))
 	for _, p := range posts {
 		if p.Meta.Published {
 			filtered = append(filtered, p)
@@ -142,16 +143,28 @@ func (s *PostService) SearchPost(slug string, ctx context.Context) []string {
 }
 
 func (s *PostService) CreatePost(data []byte, originalFilename string, ctx context.Context) error {
-	return s.store.CreatePost(data, originalFilename, ctx)
+	return s.content.CreatePost(data, originalFilename, ctx)
+}
+
+func (s *PostService) UpdatePost(slug string, data []byte, ctx context.Context) error {
+	return s.content.UpdatePost(slug, data, ctx)
+}
+
+func (s *PostService) DeletePost(slug string, ctx context.Context) error {
+	return s.content.DeletePost(slug, ctx)
+}
+
+func (s *PostService) GetRaw(slug string, ctx context.Context) ([]byte, error) {
+	return s.content.GetRaw(slug, ctx)
 }
 
 // ChooseStartingPost selects the newest post (date desc; slug asc tie-breaker) from a map.
 // Returns nil if map is empty.
-func (s *PostService) ChooseStartingPost(posts map[string]*storage.Post) *storage.Post {
+func (s *PostService) ChooseStartingPost(posts map[string]*models.Post) *models.Post {
 	if len(posts) == 0 {
 		return nil
 	}
-	candidates := make([]*storage.Post, 0, len(posts))
+	candidates := make([]*models.Post, 0, len(posts))
 	for _, p := range posts {
 		candidates = append(candidates, p)
 	}
