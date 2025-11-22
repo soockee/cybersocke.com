@@ -1,0 +1,29 @@
+package components
+
+type PostsGridProps struct {
+	Posts  []PostCardProps
+	Authed bool
+	User   *NavUser
+}
+
+templ PostsGrid(props PostsGridProps) {
+	@layout("Posts", BuildNavProps(props.Authed, props.User)) {
+		<main class="posts-container" id="posts-container">
+			<h1>Posts</h1>
+			if len(props.Posts) == 0 {
+				<div class="empty-state"><p>No posts available yet.</p></div>
+			} else {
+				<div class="posts-grid" id="posts-grid" aria-live="polite">
+					for _, post := range props.Posts {
+						@PostCard(post)
+					}
+				</div>
+				<div id="infinite-sentinel" aria-hidden="true"></div>
+				<div id="loading-indicator" class="loading-indicator" style="display:none"><span>Loading…</span></div>
+				<div id="end-message" class="end-message" style="display:none"><p>End of posts</p></div>
+			}
+			<div id="posts-announcer" class="sr-only" aria-live="polite" aria-atomic="false"></div>
+		</main>
+		<script src="/assets/js/posts_infinite.js"></script>
+	}
+}

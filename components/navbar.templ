@@ -1,16 +1,41 @@
 package components
 
-templ navTemplate(links []NavItem) {
+templ navTemplate(props NavBarProps) {
 	<link rel="stylesheet" href="/assets/css/site.css"/>
-	<nav class="navbar">
-		<ul>
-			for _, link := range links {
+	<nav class="navbar" data-nav>
+		<button type="button" class="nav-hamburger" data-nav-toggle aria-label="Menu" aria-expanded="false">☰</button>
+		<ul data-nav-list>
+			for _, link := range props.Items {
 				<li>
 					<a href={ templ.URL(link.URL) }>
 						{ link.Name }
 					</a>
 				</li>
 			}
+			<li class="nav-theme">
+				<button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">🌙</button>
+			</li>
+			<li class="nav-user-slot">
+				if props.Authed && props.User != nil {
+					<a class="nav-user-chip" href="/profile" aria-label="View profile">
+						if props.User.PictureURL != "" {
+							<img class="nav-user-avatar" src={ props.User.PictureURL } alt={ props.User.Name + " avatar" } loading="lazy" referrerpolicy="no-referrer"/>
+						} else {
+							<span class="nav-user-avatar nav-user-initials">{ props.User.Initials() }</span>
+						}
+						<div class="nav-user-meta">
+							<span class="nav-user-name">{ props.User.Name }</span>
+							if props.User.Email != "" {
+								<span class="nav-user-email">{ props.User.Email }</span>
+							}
+						</div>
+					</a>
+					<a class="nav-logout-btn" href="/auth/logout" aria-label="Log out">Logout</a>
+				} else {
+					<a class="nav-login-btn" href="/auth">Login</a>
+				}
+			</li>
 		</ul>
 	</nav>
+	<script src="/assets/js/nav_drawer.js" defer></script>
 }

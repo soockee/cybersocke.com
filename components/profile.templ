@@ -1,0 +1,148 @@
+package components
+
+import (
+	"strings"
+	"time"
+)
+
+type ProfileClaim struct {
+	Key   string
+	Value string
+}
+
+type ProfileDetails struct {
+	UID        string
+	Name       string
+	Email      string
+	PictureURL string
+	Issuer     string
+	Audience   []string
+	AuthTime   time.Time
+	IssuedAt   time.Time
+	Expires    time.Time
+	Claims     []ProfileClaim
+}
+
+type ProfileViewProps struct {
+	Authed  bool
+	User    *NavUser
+	Details ProfileDetails
+}
+
+const profileTimeFormat = "02 Jan 2006 15:04 MST"
+
+func profileFallbackInitials(name, email, uid string) string {
+	if strings.TrimSpace(name) != "" {
+		parts := strings.Fields(name)
+		if len(parts) == 1 {
+			r := []rune(parts[0])
+			if len(r) > 0 {
+				return strings.ToUpper(string(r[0]))
+			}
+		}
+		if len(parts) > 1 {
+			first := []rune(parts[0])
+			last := []rune(parts[len(parts)-1])
+			var out string
+			if len(first) > 0 {
+				out += strings.ToUpper(string(first[0]))
+			}
+			if len(last) > 0 {
+				out += strings.ToUpper(string(last[0]))
+			}
+			if out != "" {
+				return out
+			}
+		}
+	}
+	if email != "" {
+		r := []rune(email)
+		if len(r) > 0 {
+			return strings.ToUpper(string(r[0]))
+		}
+	}
+	if uid != "" {
+		r := []rune(uid)
+		if len(r) > 0 {
+			return strings.ToUpper(string(r[0]))
+		}
+	}
+	return "?"
+}
+
+templ Profile(props ProfileViewProps) {
+	@layout("Profile", BuildNavProps(props.Authed, props.User)) {
+		<section class="profile-wrapper">
+			<div class="profile-card">
+				if props.Details.PictureURL != "" {
+					<img class="profile-avatar" src={ props.Details.PictureURL } alt={ props.Details.Name + " avatar" } referrerpolicy="no-referrer" loading="lazy"/>
+				} else {
+					<div class="profile-avatar profile-avatar-fallback">
+						if props.User != nil {
+							{ props.User.Initials() }
+						} else {
+							{ profileFallbackInitials(props.Details.Name, props.Details.Email, props.Details.UID) }
+						}
+					</div>
+				}
+				<div class="profile-summary">
+					<h1>{ props.Details.Name }</h1>
+					<div class="profile-actions">
+						<a class="profile-logout-btn" href="/auth/logout">Log out</a>
+					</div>
+					if props.Details.Email != "" {
+						<p class="profile-email">{ props.Details.Email }</p>
+					}
+					<dl class="profile-basics">
+						<dt>User ID</dt>
+						<dd><code>{ props.Details.UID }</code></dd>
+						<dt>Issuer</dt>
+						<dd>{ props.Details.Issuer }</dd>
+					</dl>
+					if len(props.Details.Audience) > 0 {
+						<div class="profile-audience">
+							<span class="profile-label">Audience</span>
+							<div class="profile-chip-list">
+								for _, aud := range props.Details.Audience {
+									<span class="profile-chip">{ aud }</span>
+								}
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+			<div class="profile-metadata">
+				<section>
+					<h2>Token Timeline</h2>
+					<dl class="profile-timeline">
+						if !props.Details.AuthTime.IsZero() {
+							<dt>Authenticated</dt>
+							<dd><time datetime={ props.Details.AuthTime.Format(time.RFC3339) }>{ props.Details.AuthTime.Format(profileTimeFormat) }</time></dd>
+						}
+						if !props.Details.IssuedAt.IsZero() {
+							<dt>Issued</dt>
+							<dd><time datetime={ props.Details.IssuedAt.Format(time.RFC3339) }>{ props.Details.IssuedAt.Format(profileTimeFormat) }</time></dd>
+						}
+						if !props.Details.Expires.IsZero() {
+							<dt>Expires</dt>
+							<dd><time datetime={ props.Details.Expires.Format(time.RFC3339) }>{ props.Details.Expires.Format(profileTimeFormat) }</time></dd>
+						}
+					</dl>
+				</section>
+				<section class="profile-claims">
+					<h2>Claims</h2>
+					if len(props.Details.Claims) == 0 {
+						<p class="profile-empty">No additional custom claims on this token.</p>
+					} else {
+						<dl>
+							for _, claim := range props.Details.Claims {
+								<dt>{ claim.Key }</dt>
+								<dd>{ claim.Value }</dd>
+							}
+						</dl>
+					}
+				</section>
+			</div>
+		</section>
+	}
+}

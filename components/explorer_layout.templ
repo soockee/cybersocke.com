@@ -5,11 +5,12 @@ type ExplorerLayoutProps struct {
 	Adjacency []AdjacencyEntry
 	Tags      []string // active tag filter (tag view if len>0)
 	Authed    bool     // authentication status for dynamic nav
+	User      *NavUser
 }
 
 // ExplorerLayout presents a focused post with an adjacency sidebar.
 templ ExplorerLayout(p ExplorerLayoutProps) {
-	@layout(p.Post.Title, GetNavItems(p.Authed)) {
+	@layout(p.Post.Title, BuildNavProps(p.Authed, p.User)) {
 		<link rel="stylesheet" href="/assets/css/site.css"/>
 		if len(p.Tags) > 0 {
 			<div class="explorer-grid">
@@ -22,9 +23,16 @@ templ ExplorerLayout(p ExplorerLayoutProps) {
 				<div class="explorer-main">
 					@PostDetail(p.Post)
 				</div>
-				<div class="explorer-side">
-					@MiniGraph(p.Post.Slug, p.Adjacency, "post", "")
-					@AdjacencyPanel(AdjacencyPanelProps{CurrentSlug: p.Post.Slug, Entries: p.Adjacency})
+				<div class="explorer-side" data-explorer-side data-collapsed="false">
+					<div class="explorer-side-header">
+						<span class="side-title">Context</span>
+						<button type="button" class="side-collapse-toggle" data-side-toggle aria-expanded="true" aria-label="Collapse side panel">−</button>
+					</div>
+					<div class="explorer-side-inner">
+						@MiniGraph(p.Post.Slug, p.Adjacency, "post", "")
+						@AdjacencyPanel(AdjacencyPanelProps{CurrentSlug: p.Post.Slug, Entries: p.Adjacency})
+					</div>
+					<script defer src="/assets/js/explorer_side.js"></script>
 				</div>
 			</div>
 		}

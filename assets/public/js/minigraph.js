@@ -42,6 +42,7 @@
       elements.push({ data: { id: focusId + '->' + target, source: focusId, target, weight } });
     });
 
+    const colors = window.getGraphThemeColors ? window.getGraphThemeColors() : {};
     const cy = cytoscape({
       container,
       elements,
@@ -83,13 +84,13 @@
           'font-size': 11,
           'text-wrap': 'wrap',
           'text-max-width': 80,
-          'text-valign': 'bottom', // regular nodes: place label below node center
+          'text-valign': 'bottom',
           'text-halign': 'center',
-          'text-margin-y': 6, // push label slightly outward
-          'background-color': '#fff',
-          'border-color': '#000',
+          'text-margin-y': 6,
+          'background-color': colors.node,
+          'border-color': colors.border,
           'border-width': 1,
-          'color': '#000',
+          'color': colors.text,
           'text-background-opacity': 0,
           'text-background-padding': '2px',
           'shape': 'ellipse',
@@ -97,10 +98,10 @@
           'height': ele => 24 + (ele.data('weight') / (maxNodeWeight || 1)) * 18
         }},
         { selector: 'node.focus', style: {
-          'background-color': '#16a34a',
-          'color': '#000000',
+          'background-color': colors.nodeFocus,
+          'color': colors.textInvert,
           'border-width': 2,
-          'text-valign': 'center', // focus node: keep label inside the shape
+          'text-valign': 'center',
           'text-halign': 'center',
           'text-margin-y': 0,
           'width': ele => {
@@ -119,7 +120,7 @@
           }
         }},
         { selector: 'edge', style: {
-          'line-color': '#000',
+          'line-color': colors.edge,
           'curve-style': 'straight',
           'width': ele => 1 + (ele.data('weight') / (maxEdgeWeight || 1)) * 3
         }}
@@ -135,6 +136,43 @@
       const id = evt.target.id();
       if(id !== focusId) window.location.href = '/posts/' + id;
     });
+
+    function applyTheme(){
+      const c = window.getGraphThemeColors ? window.getGraphThemeColors() : colors;
+      cy.style()
+        .selector('node')
+        .style({
+          'background-color': c.node,
+          'border-color': c.border,
+          'color': c.text
+        })
+        .selector('node.focus')
+        .style({
+          'background-color': c.nodeFocus,
+          'color': c.textInvert
+        })
+        .selector('edge')
+        .style({ 'line-color': c.edge })
+        .update();
+    }
+    document.addEventListener('themechange', applyTheme);
+
+    // ResizeObserver: refit graph when container size changes (debounced)
+    let ro; let resizeTimer;
+    function handleResize(){
+      if(resizeTimer) cancelAnimationFrame(resizeTimer);
+      resizeTimer = requestAnimationFrame(() => {
+        try { cy.resize(); cy.fit(undefined, 30); } catch(e) {}
+      });
+    }
+    if('ResizeObserver' in window){
+      ro = new ResizeObserver(handleResize);
+      ro.observe(container);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+    // Cleanup (in case of SPA navigation)
+    window.addEventListener('beforeunload', () => { if(ro) ro.disconnect(); });
   }
 
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();

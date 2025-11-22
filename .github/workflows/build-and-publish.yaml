@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  GCS_BUCKET: cybersocke2-media-storage
 
 jobs:
   build-and-push-image:
@@ -49,3 +50,62 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  sync-schema:
+    runs-on: ubuntu-latest
+    needs: build-and-push-image
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/228682352277/locations/global/workloadIdentityPools/dz-bootstrap/providers/dz-bootstrap-github-soockee'
+          service_account: 'schema-manager@dz-cybersocke02.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Extract local schema version and hash
+        id: local_schema
+        run: |
+          VERSION=$(grep '^version:' schema/post_contract.yaml | awk '{print $2}')
+          HASH=$(sha256sum schema/post_contract.yaml | cut -d' ' -f1 | cut -c1-16)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "Local schema: version=$VERSION hash=$HASH"
+
+      - name: Check remote schema
+        id: remote_schema
+        continue-on-error: true
+        run: |
+          if gsutil -q stat gs://${{ env.GCS_BUCKET }}/schema/post_contract.yaml; then
+            gsutil cp gs://${{ env.GCS_BUCKET }}/schema/post_contract.yaml /tmp/remote_schema.yaml
+            REMOTE_VERSION=$(grep '^version:' /tmp/remote_schema.yaml | awk '{print $2}')
+            REMOTE_HASH=$(sha256sum /tmp/remote_schema.yaml | cut -d' ' -f1 | cut -c1-16)
+            echo "version=$REMOTE_VERSION" >> $GITHUB_OUTPUT
+            echo "hash=$REMOTE_HASH" >> $GITHUB_OUTPUT
+            echo "Remote schema: version=$REMOTE_VERSION hash=$REMOTE_HASH"
+          else
+            echo "No remote schema found"
+            echo "version=" >> $GITHUB_OUTPUT
+            echo "hash=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload schema if changed
+        if: steps.remote_schema.outputs.version != steps.local_schema.outputs.version || steps.remote_schema.outputs.hash != steps.local_schema.outputs.hash
+        run: |
+          echo "Schema changed (version: ${{ steps.remote_schema.outputs.version }} -> ${{ steps.local_schema.outputs.version }})"
+          gsutil -h "Content-Type:application/x-yaml" cp schema/post_contract.yaml gs://${{ env.GCS_BUCKET }}/schema/post_contract.yaml
+          echo "Schema uploaded successfully"
+
+      - name: Skip upload if unchanged
+        if: steps.remote_schema.outputs.version == steps.local_schema.outputs.version && steps.remote_schema.outputs.hash == steps.local_schema.outputs.hash
+        run: |
+          echo "Schema unchanged (version: ${{ steps.local_schema.outputs.version }}, hash: ${{ steps.local_schema.outputs.hash }})"
+          echo "Skipping upload"

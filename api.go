@@ -9,22 +9,30 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
-
 	"github.com/soockee/cybersocke.com/config"
-	"github.com/soockee/cybersocke.com/handlers"
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	_ "github.com/soockee/cybersocke.com/docs"
+
+	htmlhandler "github.com/soockee/cybersocke.com/handlers/htmlhandler"
+	jsonhandler "github.com/soockee/cybersocke.com/handlers/jsonhandler"
 	"github.com/soockee/cybersocke.com/middleware"
 	"github.com/soockee/cybersocke.com/services"
 	"github.com/soockee/cybersocke.com/storage"
 )
 
-// APIError retained for potential future structured error responses.
-type APIError struct{ Error string }
-
 // APIServer hosts all HTTP routes and their dependent services.
 // It is constructed once and its services are reused across handlers.
+// @title Cybersocke API
+// @version 1.0
+// @description HTTP JSON API for cybersocke.com posts, tags, and graphs.
+// @host cybersocke.com
+// @BasePath /api
+// @schemes https http
 type APIServer struct {
-	embedStore   storage.Storage
-	gcsStore     storage.Storage
+	assetStore   storage.AssetStore
+	contentStore storage.ContentStore
+	queryStore   storage.PostQueryStore
 	sessionStore *sessions.CookieStore
 	cfg          *config.Config
 
@@ -37,7 +45,7 @@ type APIServer struct {
 	authService  *services.AuthService
 	postService  *services.PostService
 	tagService   *services.TagService
-	graphService *services.GraphService // optional; nil if backing store doesn't support graphs
+	graphService *services.GraphService // optional; nil if backing store supports graphs
 }
 
 // route represents a single endpoint registration.
@@ -49,7 +57,7 @@ type middlewareFunc func(http.Handler) http.Handler
 // Returns an error instead of exiting so callers (main/tests) decide lifecycle.
 // NewAPIServer constructs the server and all required services.
 // Returns an error instead of exiting so callers (main/tests) decide lifecycle.
-func NewAPIServer(embed storage.Storage, gcs storage.Storage, logger *slog.Logger, assets embed.FS, cfg *config.Config) (*APIServer, error) {
+func NewAPIServer(asset storage.AssetStore, content storage.ContentStore, query storage.PostQueryStore, logger *slog.Logger, assets embed.FS, cfg *config.Config) (*APIServer, error) {
 	store := sessions.NewCookieStore([]byte(cfg.SessionSecret))
 	store.Options = &sessions.Options{
 		Path:     "/",
@@ -58,15 +66,15 @@ func NewAPIServer(embed storage.Storage, gcs storage.Storage, logger *slog.Logge
 		MaxAge:   300,
 	}
 	server := &APIServer{
-		embedStore:   embed,
-		gcsStore:     gcs,
+		assetStore:   asset,
+		contentStore: content,
+		queryStore:   query,
 		sessionStore: store,
 		cfg:          cfg,
-
-		domainName: "cybersocke.com",
-		logger:     logger,
-		assets:     assets,
-		ctx:        context.Background(),
+		domainName:   "cybersocke.com",
+		logger:       logger,
+		assets:       assets,
+		ctx:          context.Background(),
 	}
 	// Wire core services
 	authSvc, err := services.NewAuthService(server.ctx, cfg.FirebaseCredentialsBase64, cfg.GCPProjectName)
@@ -74,12 +82,12 @@ func NewAPIServer(embed storage.Storage, gcs storage.Storage, logger *slog.Logge
 		return nil, err
 	}
 	tagSvc := services.NewTagService()
-	postSvc := services.NewPostService(gcs, authSvc)
+	postSvc := services.NewPostService(content, query, authSvc)
 	server.authService = authSvc
 	server.tagService = tagSvc
 	server.postService = postSvc
 	// Optional graph service (only if storage implements GraphBuilder)
-	if gb, ok := gcs.(services.GraphBuilder); ok {
+	if gb, ok := query.(services.GraphBuilder); ok {
 		server.graphService = services.NewGraphService(gb, tagSvc)
 	}
 	return server, nil
@@ -126,6 +134,7 @@ func (s *APIServer) InitRoutes() (*http.ServeMux, error) {
 		middleware.WithCORS(),
 		middleware.WithSession(s.sessionStore, s.logger),
 	}
+	global = append(global, middleware.WithOptionalAuthentication(s.authService, s.logger))
 	if s.cfg.LocalDev {
 		global = append(global, middleware.WithDebugContext())
 	}
@@ -148,37 +157,40 @@ func (s *APIServer) InitRoutes() (*http.ServeMux, error) {
 
 // registerPublic attaches all unauthenticated & public endpoints.
 func (s *APIServer) registerPublic(register func(string, http.Handler, ...middlewareFunc)) {
-	login := handlers.NewLoginHandler(s.logger)
-	callback := handlers.NewAuthCallbackHandler(s.logger)
-	post := handlers.NewPostHandler(s.postService, s.logger)
-	home := handlers.NewHomeHandler(s.postService, s.tagService, s.logger)
-	fragments := handlers.NewPostFragmentsHandler(s.postService, s.logger)
-	tagPosts := handlers.NewTagPostsHandler(s.postService, s.logger)
-	graph := handlers.NewGraphHandler(s.logger, s.graphService, s.postService)
+	login := htmlhandler.NewLoginHandler(s.logger)
+	callback := htmlhandler.NewAuthCallbackHandler(s.logger)
+	logout := htmlhandler.NewLogoutHandler(s.logger)
+	post := htmlhandler.NewPostHandler(s.postService, s.logger)
+	fragments := htmlhandler.NewPostFragmentsHandler(s.postService, s.logger)
+	tagPosts := htmlhandler.NewTagPostsHandler(s.postService, s.logger)
+	graph := htmlhandler.NewGraphHandler(s.logger, s.graphService, s.postService)
+	postsGrid := htmlhandler.NewPostsGridHandler(s.postService, s.logger)
 
 	register("GET /auth", login)
+	register("GET /auth/logout", logout)
 	// Callback: GET for redirect completion; POST carries ID token JSON.
 	register("GET /auth/google/callback", callback)
 	register("POST /auth/google/callback", callback)
 	// Assets subtree using wildcard capture.
 	register("GET /assets/{rest...}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.StripPrefix("/assets/", s.embedStore.GetAssets()).ServeHTTP(w, r)
+		http.StripPrefix("/assets/", s.assetStore.GetAssets()).ServeHTTP(w, r)
 	}))
 	register("GET /posts/{id}", post)
 	register("GET /posts/{id}/fragment", post)
-	register("GET /", home)
+	register("GET /posts", postsGrid)
+	register("GET /", htmlhandler.NewRootRedirectHandler("/posts", s.logger))
 	register("GET /posts/fragments", fragments)
 	register("GET /tags/{tag}/posts", tagPosts)
 	register("GET /graph", graph)
 }
 
-// apiRoutes returns JSON API endpoints (versionless initial design).
 // registerAPI attaches JSON API endpoints.
 func (s *APIServer) registerAPI(register func(string, http.Handler, ...middlewareFunc)) {
 	if s.graphService != nil {
-		register("GET /api/graph", handlers.NewGraphAPIHandler(s.logger, s.graphService))
+		register("GET /api/graph", jsonhandler.NewGraphAPIHandler(s.logger, s.graphService))
 	}
-	register("GET /api/posts/{id}/adjacency", handlers.NewAdjacencyHandler(s.postService, s.tagService, s.logger))
+	register("GET /api/posts/{id}/adjacency", jsonhandler.NewAdjacencyHandler(s.postService, s.tagService, s.logger))
+	register("GET /api/posts", jsonhandler.NewPostsAPIHandler(s.postService, s.logger))
 }
 
 // secureRoutes adds authenticated endpoints (CSRF protected).
@@ -187,7 +199,11 @@ func (s *APIServer) registerSecure(register func(string, http.Handler, ...middle
 		middleware.WithCSRF(s.cfg.CSRFSecret, !s.cfg.LocalDev),
 		middleware.WithAuthentication(s.authService, s.sessionStore, s.logger),
 	}
-	register("GET /admin", handlers.NewAdminHandler(s.postService, s.authService, s.logger), secure...)
+	register("GET /swagger/{rest...}", httpSwagger.WrapHandler, secure...)
+	register("GET /admin", htmlhandler.NewAdminHandler(s.postService, s.authService, s.logger), secure...)
+	register("GET /admin/posts/{slug}/edit", htmlhandler.NewAdminEditHandler(s.postService, s.logger), secure...)
+	register("POST /admin/posts/{slug}/edit", htmlhandler.NewAdminEditHandler(s.postService, s.logger), secure...)
+	register("GET /profile", htmlhandler.NewProfileHandler(s.logger), secure...)
 }
 
 // roleRoutes attaches role-gated write operations.
@@ -199,7 +215,8 @@ func (s *APIServer) registerRole(register func(string, http.Handler, ...middlewa
 	role := []middlewareFunc{
 		middleware.WithRole("user", s.logger),
 	}
-	register("POST /posts", handlers.NewPostHandler(s.postService, s.logger), append(secure, role...)...)
+	register("POST /posts", jsonhandler.NewPostUploadHandler(s.postService, s.logger), append(secure, role...)...)
+	register("POST /admin/posts/{slug}/delete", htmlhandler.NewAdminDeleteHandler(s.postService, s.logger), append(secure, role...)...)
 }
 
 // makeHTTPHandleFunc removed; handlers now implement http.Handler directly with internal error handling.

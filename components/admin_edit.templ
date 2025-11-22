@@ -1,0 +1,46 @@
+package components
+
+import "github.com/soockee/cybersocke.com/storage/models"
+
+type AdminEditProps struct {
+	Post       *models.Post
+	Slug       string
+	CSRFToken  string
+	SchemaJSON string // injected contract JSON for editor usage
+	User       *NavUser
+}
+
+templ AdminEdit(props AdminEditProps) {
+	@layout("Edit Post", BuildNavProps(true, props.User)) {
+		<div class="admin-edit-container">
+			<h2>Edit Post: { props.Post.Meta.Name }</h2>
+			<form id="edit-form" class="edit-form" data-slug={ props.Slug }>
+				<input type="hidden" id="csrf-token" value={ props.CSRFToken }/>
+				<div id="monaco-container" class="monaco-wrapper" data-initial>{ string(props.Post.Content) }</div>
+				<!-- Review button moved into primary actions for visibility -->
+				<div id="diff-panel" class="diff-panel" style="display:none;">
+					<div class="diff-header">
+						<label><input type="checkbox" id="update-timestamp"/> Update 'updated' timestamp to now (<span id="timestamp-preview"></span>)</label>
+					</div>
+					<div id="monaco-diff-container" class="monaco-diff-wrapper"></div>
+					<div class="diff-actions">
+						<button type="button" id="back-to-edit" class="action-btn back">Back to Editor</button>
+						<button type="button" id="apply-save" class="action-btn save">Apply &amp; Save</button>
+					</div>
+				</div>
+				<div class="edit-actions">
+					<button type="submit" class="action-btn save">Save Changes</button>
+					<button type="button" id="review-btn" class="action-btn review" title="Review changes and optionally update timestamp">Review Changes</button>
+					<button type="button" id="restore-draft-btn" class="action-btn" title="Restore unsaved local draft if available">Restore Draft</button>
+					<a href="/admin" class="action-btn cancel">Cancel</a>
+					<small id="draft-status" class="draft-status" style="margin-left:8px;opacity:0.7;">
+						Autosave every 30s. Ctrl+S saves draft locally.
+					</small>
+				</div>
+			</form>
+		</div>
+		<script id="post-contract" type="application/json">{ props.SchemaJSON }</script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js" integrity="sha512-ZG31AN9z/CQD1YDDAK4RUAvogwbJHv6bHrumrnMLzdCrVu4HeAqrUX7Jsal/cbUwXGfaMUNmQU04tQ8XXl5Znw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		<script src="/assets/js/admin_editor.js" type="module"></script>
+	}
+}

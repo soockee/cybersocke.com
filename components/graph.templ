@@ -1,19 +1,20 @@
 package components
 
 import (
-	"github.com/soockee/cybersocke.com/storage"
+	"github.com/soockee/cybersocke.com/storage/graph"
 	"strings"
 )
 
 type GraphViewProps struct {
-	Graph         *storage.TagGraph
+	Graph         *graph.Graph
 	MinSharedTags int
 	IncludeTags   []string
 	Authed        bool
+	User          *NavUser
 }
 
 templ Graph(props GraphViewProps) {
-	@layout("Graph", GetNavItems(props.Authed)) {
+	@layout("Graph", BuildNavProps(props.Authed, props.User)) {
 		<div>
 			<h1>Content Graph</h1>
 			<p>Nodes: { len(props.Graph.Posts) } | Edges: { len(props.Graph.Edges) } | MinSharedTags: { props.MinSharedTags }</p>

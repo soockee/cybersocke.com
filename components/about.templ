@@ -5,10 +5,11 @@ import "bytes"
 type AboutViewProps struct {
 	Content bytes.Buffer
 	Authed  bool
+	User    *NavUser
 }
 
 templ About(props AboutViewProps) {
-	@layout("About", GetNavItems(props.Authed)) {
+	@layout("About", BuildNavProps(props.Authed, props.User)) {
 		<div>
 			@templ.Raw(props.Content.String())
 		</div>

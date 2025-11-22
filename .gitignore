@@ -4,3 +4,4 @@ go.work.sum
 *_templ.txt
 main
 .env
+contract_migrate

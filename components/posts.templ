@@ -2,7 +2,7 @@ package components
 
 import (
 	"bytes"
-	"github.com/soockee/cybersocke.com/storage"
+	"github.com/soockee/cybersocke.com/storage/models"
 	"strings"
 	"time"
 )
@@ -13,13 +13,15 @@ type PostViewProps struct {
 	Title       string
 	Slug        string
 	Tags        []string
-	Related     []*storage.Post
+	Related     []*models.Post
 	Lead        string
 	Created     time.Time
 	Updated     time.Time
 	Published   bool
 	Aliases     []string
 	TagFamilies map[string][]string
+	Authed      bool
+	User        *NavUser
 }
 
 type PostCardProps struct {
@@ -31,7 +33,7 @@ type PostCardProps struct {
 }
 
 templ Post(props PostViewProps) {
-	@layout("Post", []NavItem{NewNavItem("Home", "/")}) {
+	@layout("Post", NavBarProps{Items: []NavItem{NewNavItem("Home", "/")}, Authed: props.Authed, User: props.User}) {
 		<article class="post-full" data-slug={ props.Slug }>
 			<div class="post-meta">
 				<h1>{ props.Title }</h1>
@@ -62,8 +64,9 @@ templ Post(props PostViewProps) {
 				</div>
 			</div>
 			@templ.Raw(props.Content.String())
-			<div class="post-tags"><strong>All Tags:</strong>@TagInlineList(props.Tags, "/?tags=")
-</div>
+			<div class="post-tags">
+				<strong>All Tags:</strong>@TagInlineList(props.Tags, "/?tags=")
+			</div>
 			if len(props.Related) > 0 {
 				<section class="related-posts">
 					<h2>Related Posts</h2>
@@ -82,18 +85,12 @@ templ Post(props PostViewProps) {
 templ PostCard(props PostCardProps) {
 	<section class="postcard" data-slug={ props.Slug } data-tags={ strings.Join(props.Tags, " ") }>
 		<a href={ templ.URL("/posts/" + props.Slug) }>
-			<aside>
-				<h2>
-					{ props.Title }
-				</h2>
-				<p>{ props.Description }</p>
-				<div class="postcard_footer">
-					<p class="p_date"><time datetime={ props.Date.Format("2006-01-02") }>{ props.Date.Format("January 2, 2006") }</time></p>
-					<span>
-						{ strings.Join(props.Tags, ", ") }
-					</span>
-				</div>
-			</aside>
+			<h2>{ props.Title }</h2>
+			<p>{ props.Description }</p>
+			<div class="postcard_footer">
+				<p class="p_date"><time datetime={ props.Date.Format("2006-01-02") }>{ props.Date.Format("January 2, 2006") }</time></p>
+				<span>{ strings.Join(props.Tags, ", ") }</span>
+			</div>
 		</a>
 	</section>
 }
