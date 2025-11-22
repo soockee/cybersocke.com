@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/soockee/cybersocke.com/compare/v1.11.3...v1.12.0) (2025-11-22)
+
+
+### Features
+
+* add admin enhancements ([#35](https://github.com/soockee/cybersocke.com/issues/35)) ([dc3f39d](https://github.com/soockee/cybersocke.com/commit/dc3f39d85ee319a9cbeb73a62c63623eb68f600f))
+
+
+### Bug Fixes
+
+* add swagger doc ([dc3f39d](https://github.com/soockee/cybersocke.com/commit/dc3f39d85ee319a9cbeb73a62c63623eb68f600f))
+
 ## [1.11.3](https://github.com/soockee/cybersocke.com/compare/v1.11.2...v1.11.3) (2025-11-21)
 
 
