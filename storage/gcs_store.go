@@ -209,9 +209,8 @@ func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx conte
 		return fmt.Errorf("unauthorized: firebase token missing")
 	}
 
-
 	derivedSlug := SanitizeFilename(originalFilename)
-	postMeta := PostMeta{}
+	postMeta := models.PostMeta{}
 	// Parse frontmatter to populate metadata and obtain the markdown body without frontmatter.
 	body, err := frontmatter.Parse(strings.NewReader(string(content)), &postMeta)
 	if err != nil {
@@ -252,7 +251,6 @@ func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx conte
 	if err := obj.Close(); err != nil {
 		return fmt.Errorf("close writer: %w", err)
 	}
-
 
 	post := models.Post{Meta: postMeta, Content: body}
 
