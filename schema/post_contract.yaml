@@ -32,6 +32,10 @@ fields:
     type: array[string]
     required: true
     description: Classified taxonomy tags with family prefixes.
+  - name: source
+    type: string
+    required: false
+    description: Origin or source of the content.
 tagFamilies:
   type:
     min: 1
@@ -51,7 +55,7 @@ tagFamilies:
     description: Source origin indicator.
   theme:
     min: 1
-    max: 5
+    max: 10
     description: Topical themes.
   target:
     min: 0
