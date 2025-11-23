@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/soockee/cybersocke.com/compare/v1.12.1...v1.12.2) (2025-11-23)
+
+
+### Bug Fixes
+
+* migrator serializaion bug ([#40](https://github.com/soockee/cybersocke.com/issues/40)) ([20a5f57](https://github.com/soockee/cybersocke.com/commit/20a5f57b65b0bddb4bbd73e3923dcc0756e637b0))
+
 ## [1.12.1](https://github.com/soockee/cybersocke.com/compare/v1.12.0...v1.12.1) (2025-11-23)
 
 
