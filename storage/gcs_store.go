@@ -210,9 +210,15 @@ func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx conte
 	}
 
 	// Derive slug from original filename (ignore any frontmatter slug)
+<<<<<<< Updated upstream
 	derivedSlug := validation.SanitizeFilename(originalFilename)
 	postMeta := models.PostMeta{}
 	// Parse frontmatter to populate metadata and capture markdown body (excluding frontmatter).
+=======
+	derivedSlug := SanitizeFilename(originalFilename)
+	postMeta := PostMeta{}
+	// Parse frontmatter to populate metadata and obtain the markdown body without frontmatter.
+>>>>>>> Stashed changes
 	body, err := frontmatter.Parse(strings.NewReader(string(content)), &postMeta)
 	if err != nil {
 		return err
@@ -253,8 +259,14 @@ func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx conte
 		return fmt.Errorf("close writer: %w", err)
 	}
 
+<<<<<<< Updated upstream
 	// Update in-memory caches with body sans frontmatter for immediate render consistency.
 	post := models.Post{Meta: postMeta, Content: body}
+=======
+	// Update in-memory caches so new post is immediately queryable.
+	// Store the body WITHOUT frontmatter so immediate reads don't render the metadata block.
+	post := Post{Meta: postMeta, Content: body}
+>>>>>>> Stashed changes
 	s.mu.Lock()
 	s.postCache[postMeta.Slug] = &post
 	s.tagIndex.Add(postMeta.Slug, postMeta.Tags)
