@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.3](https://github.com/soockee/cybersocke.com/compare/v1.12.2...v1.12.3) (2025-11-23)
+
+
+### Bug Fixes
+
+* ad migration code ([#42](https://github.com/soockee/cybersocke.com/issues/42)) ([27f8a12](https://github.com/soockee/cybersocke.com/commit/27f8a126d5431529f3bf5e9bfbad6adc42c7729e))
+* remove gitignore entry for migrate tool ([#44](https://github.com/soockee/cybersocke.com/issues/44)) ([d9a670b](https://github.com/soockee/cybersocke.com/commit/d9a670b6b06c88f65a560f64bd373778c3228228))
+
 ## [1.12.2](https://github.com/soockee/cybersocke.com/compare/v1.12.1...v1.12.2) (2025-11-23)
 
 
