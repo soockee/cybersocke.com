@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.1](https://github.com/soockee/cybersocke.com/compare/v1.12.0...v1.12.1) (2025-11-23)
+
+
+### Bug Fixes
+
+* add migration into pipeline ([#37](https://github.com/soockee/cybersocke.com/issues/37)) ([0c30fc0](https://github.com/soockee/cybersocke.com/commit/0c30fc0630353c9e74b2bc6d3bec4ad51bfcd023))
+* update contract migration ([#39](https://github.com/soockee/cybersocke.com/issues/39)) ([9c482f0](https://github.com/soockee/cybersocke.com/commit/9c482f091de861520a8b9c4710f22d5010d063fd))
+
 ## [1.12.0](https://github.com/soockee/cybersocke.com/compare/v1.11.3...v1.12.0) (2025-11-22)
 
 
