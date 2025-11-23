@@ -109,10 +109,22 @@ jobs:
           gsutil -h "Content-Type:application/x-yaml" cp schema/post_contract.yaml gs://${{ env.GCS_BUCKET }}/schema/post_contract.yaml
           echo "Schema uploaded successfully"
 
+      - name: Verify contract migration tool
+        if: steps.remote_schema.outputs.version != steps.local_schema.outputs.version || steps.remote_schema.outputs.hash != steps.local_schema.outputs.hash
+        run: |
+          ls -al .
+          ls -al cmd
+          test -d cmd/contract_migrate
+
+      - name: Build contract migration CLI
+        if: steps.remote_schema.outputs.version != steps.local_schema.outputs.version || steps.remote_schema.outputs.hash != steps.local_schema.outputs.hash
+        run: |
+          go build -o contract_migrate ./cmd/contract_migrate
+
       - name: Run contract migration
         if: steps.remote_schema.outputs.version != steps.local_schema.outputs.version || steps.remote_schema.outputs.hash != steps.local_schema.outputs.hash
         run: |
-          go run ./cmd/contract_migrate \
+          ./contract_migrate \
             --bucket ${{ env.GCS_BUCKET }} \
             --schema schema/post_contract.yaml
 

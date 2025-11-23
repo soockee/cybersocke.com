@@ -271,10 +271,23 @@ func (s *GCSStore) UpdatePost(slug string, data []byte, ctx context.Context) err
 	if firebaseTok == nil {
 		return fmt.Errorf("unauthorized: firebase token missing")
 	}
+	actor := firebaseTok.UID
+	if actor == "" {
+		actor = "firebase_user"
+	}
+	return s.updatePost(slug, data, ctx, actor)
+}
+
+// UpdatePostSystem overwrites a post using elevated system credentials (no Firebase token required).
+// It is intended for trusted automation such as contract migrations running with bucket-level IAM access.
+func (s *GCSStore) UpdatePostSystem(slug string, data []byte, ctx context.Context) error {
+	return s.updatePost(slug, data, ctx, "contract_migrate")
+}
+
+func (s *GCSStore) updatePost(slug string, data []byte, ctx context.Context, actor string) error {
 	if !strings.HasSuffix(slug, ".md") {
 		slug = slug + ".md"
 	}
-	// Parse new content
 	postPtr, err := parsePost(data)
 	if err != nil {
 		return err
@@ -289,11 +302,11 @@ func (s *GCSStore) UpdatePost(slug string, data []byte, ctx context.Context) err
 	if err := validation.ValidateTags(&postPtr.Meta, config.Contract); err != nil {
 		return err
 	}
-	// Leave timestamps untouched; editor layer is responsible for updating frontmatter.
-	// Write to GCS
 	obj := s.client.Bucket(s.bucketName).Object("posts/" + slug).NewWriter(ctx)
 	obj.ContentType = "text/markdown"
-	obj.Metadata = map[string]string{"updated_by": firebaseTok.UID}
+	if actor != "" {
+		obj.Metadata = map[string]string{"updated_by": actor}
+	}
 	if _, err := obj.Write(data); err != nil {
 		obj.Close()
 		return fmt.Errorf("write object: %w", err)
@@ -301,19 +314,16 @@ func (s *GCSStore) UpdatePost(slug string, data []byte, ctx context.Context) err
 	if err := obj.Close(); err != nil {
 		return fmt.Errorf("close writer: %w", err)
 	}
-	// Update caches atomically
 	s.mu.Lock()
 	oldPost, had := s.postCache[slug]
 	if had {
-		// Remove old tag references
 		s.tagIndex.Remove(slug, oldPost.Meta.Tags)
 	}
 	s.postCache[slug] = postPtr
 	s.tagIndex.Add(slug, postPtr.Meta.Tags)
-	// Graph needs rebuild to reflect changes
 	s.graphBuilder.Invalidate()
 	s.mu.Unlock()
-	s.logger.Info("post updated", slog.String("slug", slug), slog.Int("tag_count", len(postPtr.Meta.Tags)))
+	s.logger.Info("post updated", slog.String("slug", slug), slog.Int("tag_count", len(postPtr.Meta.Tags)), slog.String("actor", actor))
 	return nil
 }
 
@@ -446,8 +456,6 @@ func (s *GCSStore) PutSchema(ctx context.Context, data []byte) error {
 	s.logger.Info("schema persisted", slog.String("path", "schema/post_contract.yaml"), slog.Int("bytes", len(data)))
 	return nil
 }
-
-// readWithExtension removed (unused); callers should compose name+extension directly with readObject.
 
 // parsePost converts raw frontmatter+content bytes into a Post
 func parsePost(raw []byte) (*models.Post, error) {
