@@ -103,3 +103,49 @@ fields:
 		t.Errorf("Unexpected error message: %v", err)
 	}
 }
+
+func TestApplyMigrationsRespectsChain(t *testing.T) {
+	contract := &PostContract{
+		Version: 3,
+		Migrations: []Migration{
+			{From: 1, To: 2, Steps: []MigrationStep{{Op: "setField", Field: "ran12", Value: "applied"}}},
+			{From: 2, To: 3, Steps: []MigrationStep{{Op: "setField", Field: "ran23", Value: "applied"}}},
+		},
+	}
+	front := map[string]any{}
+	if _, err := contract.ApplyMigrations(front); err != nil {
+		t.Fatalf("ApplyMigrations returned error: %v", err)
+	}
+	if front["ran12"] != "applied" {
+		t.Fatalf("expected ran12 to be applied, got %v", front["ran12"])
+	}
+	if front["ran23"] != "applied" {
+		t.Fatalf("expected ran23 to be applied, got %v", front["ran23"])
+	}
+	if v := front["schema_version"]; v != "3" {
+		t.Fatalf("expected schema_version 3, got %v", v)
+	}
+}
+
+func TestApplyMigrationsFromClampsBaseline(t *testing.T) {
+	contract := &PostContract{
+		Version: 3,
+		Migrations: []Migration{
+			{From: 1, To: 2, Steps: []MigrationStep{{Op: "setField", Field: "ran12", Value: "applied"}}},
+			{From: 2, To: 3, Steps: []MigrationStep{{Op: "setField", Field: "ran23", Value: "applied"}}},
+		},
+	}
+	front := map[string]any{}
+	if _, err := contract.ApplyMigrationsFrom(front, 2); err != nil {
+		t.Fatalf("ApplyMigrationsFrom returned error: %v", err)
+	}
+	if _, ok := front["ran12"]; ok {
+		t.Fatalf("expected ran12 to be skipped when baseline is 2")
+	}
+	if front["ran23"] != "applied" {
+		t.Fatalf("expected ran23 to be applied, got %v", front["ran23"])
+	}
+	if v := front["schema_version"]; v != "3" {
+		t.Fatalf("expected schema_version 3, got %v", v)
+	}
+}
