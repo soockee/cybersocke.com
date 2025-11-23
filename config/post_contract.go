@@ -158,25 +158,29 @@ func (c *PostContract) ApplyMigrations(front map[string]any) (int, error) {
 	if c == nil {
 		return 0, fmt.Errorf("contract not loaded")
 	}
-	cur := 1
-	if v, ok := front["schema_version"].(string); ok && v != "" {
-		// best effort parse
-		for _, ch := range v {
-			if ch < '0' || ch > '9' {
-				cur = 1
-				break
-			}
-		}
-		// simple atoi without error propagation
-		if n := parseInt(v); n > 0 {
-			cur = n
-		}
+	cur := extractSchemaVersion(front)
+	return c.runMigrations(front, cur, c.Version)
+}
+
+// ApplyMigrationsFrom enforces a minimum starting version before applying migrations.
+// If the detected schema_version is lower than minVersion (or missing), it is clamped
+// to minVersion so only newer migration steps are executed.
+func (c *PostContract) ApplyMigrationsFrom(front map[string]any, minVersion int) (int, error) {
+	if c == nil {
+		return 0, fmt.Errorf("contract not loaded")
 	}
-	target := c.Version
+	cur := extractSchemaVersion(front)
+	if minVersion > 0 && cur < minVersion {
+		cur = minVersion
+		front["schema_version"] = fmt.Sprintf("%d", cur)
+	}
+	return c.runMigrations(front, cur, c.Version)
+}
+
+func (c *PostContract) runMigrations(front map[string]any, cur, target int) (int, error) {
 	if cur >= target {
 		return cur, nil
 	}
-	// Build lookup of migrations path
 	stepApplied := false
 	for cur < target {
 		mig, ok := findMigration(c.Migrations, cur)
@@ -206,6 +210,21 @@ func (c *PostContract) ApplyMigrations(front map[string]any) (int, error) {
 		return cur, nil
 	}
 	return cur, nil
+}
+
+func extractSchemaVersion(front map[string]any) int {
+	cur := 1
+	if v, ok := front["schema_version"].(string); ok && v != "" {
+		for _, ch := range v {
+			if ch < '0' || ch > '9' {
+				return 1
+			}
+		}
+		if n := parseInt(v); n > 0 {
+			cur = n
+		}
+	}
+	return cur
 }
 
 func findMigration(migs []Migration, from int) (Migration, bool) {
