@@ -152,12 +152,14 @@ func (s *GCSStore) GetPost(slug string, ctx context.Context) (*models.Post, erro
 	s.mu.RUnlock()
 
 	objName := "posts/" + slug
-	raw, err2 := s.readObject(ctx, objName)
-	if err2 != nil {
-		return nil, err2
+	raw, err := s.readObject(ctx, objName)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "failed to read object", slog.Any("err", err))
+		return nil, err
 	}
 	postPtr, err := parsePost(raw)
 	if err != nil {
+		s.logger.ErrorContext(ctx, "failed to prase post", slog.Any("err", err))
 		return nil, err
 	}
 	postPtr.Meta.Slug = slug

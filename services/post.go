@@ -24,13 +24,12 @@ func NewPostService(content storage.ContentStore, query storage.PostQueryStore, 
 }
 
 func (s *PostService) GetPost(slug string, ctx context.Context) (*models.Post, error) {
-	post, err := s.content.GetPost(slug, ctx)
-	if err != nil {
-		return nil, err
-	}
+	post, _ := s.content.GetPost(slug, ctx)
+	// treat non-existing post as not found
 	if post == nil {
 		return nil, nil
 	}
+
 	if !post.Meta.Published {
 		// Allow access if authenticated (firebase token present in context)
 		if tok, _ := ctx.Value(session.IdTokenKey).(*firebaseauth.Token); tok == nil {
