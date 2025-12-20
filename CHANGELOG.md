@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.5](https://github.com/soockee/cybersocke.com/compare/v1.12.4...v1.12.5) (2025-12-20)
+
+
+### Bug Fixes
+
+* update google auth credentials ([#49](https://github.com/soockee/cybersocke.com/issues/49)) ([85daab6](https://github.com/soockee/cybersocke.com/commit/85daab660777b704f210f86b119190a9374e571c))
+
 ## [1.12.4](https://github.com/soockee/cybersocke.com/compare/v1.12.3...v1.12.4) (2025-12-20)
 
 
