@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.4](https://github.com/soockee/cybersocke.com/compare/v1.12.3...v1.12.4) (2025-12-20)
+
+
+### Bug Fixes
+
+* handle non-existing posts ([#47](https://github.com/soockee/cybersocke.com/issues/47)) ([17f2df3](https://github.com/soockee/cybersocke.com/commit/17f2df3f46341782ecc9dba6a67bcee9b089cf17))
+
 ## [1.12.3](https://github.com/soockee/cybersocke.com/compare/v1.12.2...v1.12.3) (2025-11-23)
 
 
