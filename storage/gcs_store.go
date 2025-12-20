@@ -13,7 +13,9 @@ import (
 
 	"log/slog"
 
+	"cloud.google.com/go/auth/credentials"
 	"cloud.google.com/go/storage"
+
 	firebaseauth "firebase.google.com/go/v4/auth"
 	"github.com/soockee/cybersocke.com/config"
 	"github.com/soockee/cybersocke.com/parser/frontmatter"
@@ -57,9 +59,16 @@ func NewGCSStore(ctx context.Context, logger *slog.Logger, bucketName string, cr
 		return nil, fmt.Errorf("decoding base64 credentials: %w", err)
 	}
 
+	creds, err := credentials.NewCredentialsFromJSON(credentials.ServiceAccount, credJSON, &credentials.DetectOptions{
+		Scopes: []string{
+			"https://www.googleapis.com/auth/cloud-platform",
+		},
+		CredentialsJSON: credJSON,
+	})
+
 	client, err := storage.NewClient(
 		ctx,
-		option.WithCredentialsJSON(credJSON),
+		option.WithAuthCredentials(creds),
 		option.WithUserAgent("cybersocke.com/storage-gcs"),
 	)
 	if err != nil {
