@@ -13,7 +13,9 @@ import (
 
 	"log/slog"
 
+	"cloud.google.com/go/auth/credentials"
 	"cloud.google.com/go/storage"
+
 	firebaseauth "firebase.google.com/go/v4/auth"
 	"github.com/soockee/cybersocke.com/config"
 	"github.com/soockee/cybersocke.com/parser/frontmatter"
@@ -57,9 +59,20 @@ func NewGCSStore(ctx context.Context, logger *slog.Logger, bucketName string, cr
 		return nil, fmt.Errorf("decoding base64 credentials: %w", err)
 	}
 
+	creds, err := credentials.NewCredentialsFromJSON(credentials.ServiceAccount, credJSON, &credentials.DetectOptions{
+		Scopes: []string{
+			"https://www.googleapis.com/auth/cloud-platform",
+		},
+		CredentialsJSON: credJSON,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("creating credentials for client with JSON key: %w", err)
+	}
+
 	client, err := storage.NewClient(
 		ctx,
-		option.WithCredentialsJSON(credJSON),
+		option.WithAuthCredentials(creds),
 		option.WithUserAgent("cybersocke.com/storage-gcs"),
 	)
 	if err != nil {
@@ -247,7 +260,9 @@ func (s *GCSStore) CreatePost(content []byte, originalFilename string, ctx conte
 	obj.Metadata = map[string]string{"uploaded_by": firebaseTok.UID}
 
 	if _, err := obj.Write(content); err != nil {
-		obj.Close()
+		if cerr := obj.Close(); cerr != nil {
+			return fmt.Errorf("write object: %v; close writer: %w", err, cerr)
+		}
 		return fmt.Errorf("write object: %w", err)
 	}
 	if err := obj.Close(); err != nil {
@@ -309,7 +324,9 @@ func (s *GCSStore) updatePost(slug string, data []byte, ctx context.Context, act
 		obj.Metadata = map[string]string{"updated_by": actor}
 	}
 	if _, err := obj.Write(data); err != nil {
-		obj.Close()
+		if cerr := obj.Close(); cerr != nil {
+			return fmt.Errorf("write object: %v; close writer: %w", err, cerr)
+		}
 		return fmt.Errorf("write object: %w", err)
 	}
 	if err := obj.Close(); err != nil {
@@ -389,7 +406,9 @@ func (s *GCSStore) preloadCache(ctx context.Context) error {
 			return fmt.Errorf("reading object %s: %w", attrs.Name, err)
 		}
 		data, err := io.ReadAll(rc)
-		rc.Close()
+		if cerr := rc.Close(); cerr != nil {
+			return fmt.Errorf("closing reader %s: %w", attrs.Name, cerr)
+		}
 		if err != nil {
 			return fmt.Errorf("reading data %s: %w", attrs.Name, err)
 		}
@@ -421,14 +440,18 @@ func (s *GCSStore) preloadCache(ctx context.Context) error {
 }
 
 // readObject reads raw bytes from GCS
-func (s *GCSStore) readObject(ctx context.Context, name string) ([]byte, error) {
+func (s *GCSStore) readObject(ctx context.Context, name string) (data []byte, err error) {
 	rc, err := s.client.Bucket(s.bucketName).Object(name).NewReader(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("opening object %s: %w", name, err)
 	}
-	defer rc.Close()
+	defer func() {
+		if cerr := rc.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("closing object %s: %w", name, cerr)
+		}
+	}()
 
-	data, err := io.ReadAll(rc)
+	data, err = io.ReadAll(rc)
 	if err != nil {
 		return nil, fmt.Errorf("reading data %s: %w", name, err)
 	}
@@ -448,7 +471,9 @@ func (s *GCSStore) PutSchema(ctx context.Context, data []byte) error {
 	obj.ContentType = "application/x-yaml"
 	obj.Metadata = map[string]string{"purpose": "post_contract_canonical"}
 	if _, err := obj.Write(data); err != nil {
-		obj.Close()
+		if cerr := obj.Close(); cerr != nil {
+			return fmt.Errorf("write schema object: %v; close writer: %w", err, cerr)
+		}
 		return fmt.Errorf("write schema object: %w", err)
 	}
 	if err := obj.Close(); err != nil {
